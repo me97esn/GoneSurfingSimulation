@@ -1,0 +1,42 @@
+#! /bin/bash
+
+# Wave display, same file format as the forces
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_med_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_med_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-1.json   &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_med_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-2.json  & 
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_med_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-3.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_med_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-4.json  
+
+# Wave display high res
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/0 /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-0.json   &
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/1  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-1.json  &
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/2  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-2.json  & 
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/3  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-3.json  &
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/4  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-4.json  &
+node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res_smaller_domain/5 /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-smaller-domain-5.json 
+
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-6.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-7.json  & 
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-8.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_res  /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-highres-9.json  
+# Wave display higher res
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-1.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-2.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-3.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-4.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-5.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-6.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-7.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-8.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-9.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-10.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-11.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-12.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-13.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-14.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-15.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-16.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-17.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-18.json  &
+# node --max-old-space-size=4096 convert_x3d_files_to_ue4_datatable /hdd/gone_surfing_exports/medium_wave_left/waves_display_high_2_res /hdd/gone_surfing_exports/medium_wave_left/medium_wave_left_vertices_and_normals-higherres-19.json  

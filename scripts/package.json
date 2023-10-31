@@ -1,0 +1,15 @@
+{
+  "name": "gone-surfing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "convert_castle_file_to_houdini_json.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ndb": "^1.1.5",
+    "xml-js": "^1.6.11"
+  }
+}

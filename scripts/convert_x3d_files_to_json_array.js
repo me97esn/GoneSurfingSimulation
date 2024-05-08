@@ -5,11 +5,10 @@ const path = require("path");
 const [, , dir, resultFileUri] = process.argv;
 
 const files = fs.readdirSync(dir);
-const result = [];
 // NOTE: the order of the files are not in order. Don't use this for production data.
 for (const fileName of files) {
   const row = [];
-  result.push(row);
+  const coords = [];
   if (fileName.match(/.*x3d$/)) {
     console.log(fileName);
 
@@ -56,18 +55,23 @@ for (const fileName of files) {
         normals.pop(),
       ].map((numStr) => Number.parseFloat(numStr));
 
-      if (coordsAndNormals[3] > 0) {
+      // if (coordsAndNormals[3] > 0)
+      {
         {
-          // Y: from/to the shore
-          // X: along the shore
-          // Z: up/down
-
+          // TODO: sort the vertices
           const [X, Y, Z, NX, NY, NZ] = coordsAndNormals;
-          row.push(Z);
+          const coord = { X, Y, Z };
+
+          console.log(
+            `X: ${X}, Y: ${Y}, Z: ${Z}, NX: ${NX}, NY: ${NY}, NZ: ${NZ}`
+          );
+          // row.push(X);
+          coords.push(coord);
         }
       }
     }
   }
+  const result = coords.sort((a, b) => a.Y - b.Y).map((coord) => coord.X);
 
   /**
    * Replace the content of the result file after each written file

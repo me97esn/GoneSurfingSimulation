@@ -3,7 +3,6 @@ import json
 target_object = bpy.data.objects['fluid_surface']
 start_frame = 752
 end_frame = 1325
-end_frame = 760 
 scn = bpy.context.scene
 
 output_directory = "/home/emil/workspace/GoneSurfingScripts"
@@ -15,9 +14,9 @@ result = []
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    for x in range(10):
+    for x in range(100):
         row = []
-        for y in range(10):
+        for y in range(100):
             ray_begin = Vector((0+x, 0+y, 111))
             ray_end = Vector((0+x, 0+y, -100))
             ray_begin_local = target_object.matrix_world.inverted() @ ray_begin

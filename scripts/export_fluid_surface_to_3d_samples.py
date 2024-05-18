@@ -3,6 +3,7 @@ import json
 target_object = bpy.data.objects['fluid_surface']
 start_frame = 752
 end_frame = 1325
+# end_frame = 762 
 scn = bpy.context.scene
 
 output_directory = "/home/emil/workspace/GoneSurfingScripts"

@@ -7,7 +7,7 @@ end_frame = 1325
 scn = bpy.context.scene
 
 output_directory = "/home/emil/workspace/GoneSurfingScripts"
-output_filename = "samples.json"
+output_filename = "wave_samples.json"
 # TODO: write python file instead
 output_filepath = os.path.join(output_directory, output_filename)
 file = open(output_filepath, "w")

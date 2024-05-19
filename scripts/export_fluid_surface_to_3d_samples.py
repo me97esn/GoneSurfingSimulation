@@ -15,11 +15,11 @@ result = []
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    for x in range(100):
+    for x in range(30):
         row = []
-        for y in range(100):
-            ray_begin = Vector((0+x, 0+y, 111))
-            ray_end = Vector((0+x, 0+y, -100))
+        for y in range(30):
+            ray_begin = Vector((0+3*x, 0+3*y, 111))
+            ray_end = Vector((0+3*x, 0+3*y, -100))
             ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
             ray_direction = ray_end - ray_begin
             ray_direction.normalize()

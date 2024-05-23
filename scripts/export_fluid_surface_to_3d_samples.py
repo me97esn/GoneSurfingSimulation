@@ -16,13 +16,15 @@ for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
     step = 3
-    y_length = 400
-    x_length = 150
-    for x in range(x_length/step):
+    y_length = 350
+    x_length = 160
+    start_trace_x = -60
+    start_trace_y = -200
+    for x in range(int(x_length/step)):
         row = []
-        for y in range(y_length/step):
-            ray_begin = Vector((-70+step * x, -250+step*y, 111))
-            ray_end = Vector((-70+step*x, -250+step*y, -100))
+        for y in range(int(y_length/step)):
+            ray_begin = Vector((start_trace_x+step * x, start_trace_y+step*y, 100))
+            ray_end = Vector((start_trace_x+step*x, start_trace_y+step*y, -100))
             ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
             ray_direction = ray_end - ray_begin
             ray_direction.normalize()

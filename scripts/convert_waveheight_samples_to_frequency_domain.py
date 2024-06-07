@@ -8,6 +8,7 @@ class NumpyArrayEncoder(JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         elif np.iscomplexobj(obj):
+            # TODO: This is a hack. We should probably return the real and imaginary parts separately.
             return abs(obj)
         return JSONEncoder.default(self, obj)
 

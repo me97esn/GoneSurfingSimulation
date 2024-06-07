@@ -36,19 +36,3 @@ for frame in range(start_frame, end_frame+1):
 
 file.write(json.dumps(samples))
 file.close()
-
-# Now: also write a subset of the frequencies after fft, to another file.
-output_filename_freqs = "wave_frequencies_subset.json"
-output_filepath_freqs = os.path.join(output_directory, output_filename_freqs)
-file_freqs = open(output_filepath_freqs, "w")
-number_of_frequencies_to_include = 10
-frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include }
-
-# TODO: move this to a separate file, to make converting to json easier
-# import numpy as np
-# number_of_freqs = 15
-# frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
-# filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]).toList() for frame_frequencies in frequencies_all_frames]
-# frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
-# file_freqs.write(json.dumps(frequencies_result))
-# file_freqs.close()

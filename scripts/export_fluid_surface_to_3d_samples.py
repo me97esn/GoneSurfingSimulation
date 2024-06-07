@@ -3,7 +3,7 @@ import json
 target_object = bpy.data.objects['fluid_surface']
 start_frame = 752
 end_frame = 1325
-# end_frame = 762 
+# end_frame = 753
 scn = bpy.context.scene
 
 output_directory = "/home/emil/workspace/GoneSurfingScripts"
@@ -15,7 +15,7 @@ samples = []
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    step = 10
+    step = 3
     y_length = 350
     x_length = 160
     start_trace_x = -60
@@ -44,8 +44,11 @@ file_freqs = open(output_filepath_freqs, "w")
 number_of_frequencies_to_include = 10
 frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include }
 
-frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
-filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]) for frame_frequencies in frequencies_all_frames]
-frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
-file_freqs.write(json.dumps(frequencies_result))
-file_freqs.close()
+# TODO: move this to a separate file, to make converting to json easier
+# import numpy as np
+# number_of_freqs = 15
+# frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
+# filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]).toList() for frame_frequencies in frequencies_all_frames]
+# frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
+# file_freqs.write(json.dumps(frequencies_result))
+# file_freqs.close()

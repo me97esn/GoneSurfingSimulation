@@ -11,11 +11,11 @@ output_filename = "wave_samples.json"
 # TODO: write python file instead
 output_filepath = os.path.join(output_directory, output_filename)
 file = open(output_filepath, "w")
-result = []
+samples = []
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    step = 3
+    step = 10
     y_length = 350
     x_length = 160
     start_trace_x = -60
@@ -32,7 +32,20 @@ for frame in range(start_frame, end_frame+1):
             sample = location.z
             row.append(sample)
         frame_samples.append(row)
-    result.append(frame_samples)
+    samples.append(frame_samples)
 
-file.write(json.dumps(result))
+file.write(json.dumps(samples))
 file.close()
+
+# Now: also write a subset of the frequencies after fft, to another file.
+output_filename_freqs = "wave_frequencies_subset.json"
+output_filepath_freqs = os.path.join(output_directory, output_filename_freqs)
+file_freqs = open(output_filepath_freqs, "w")
+number_of_frequencies_to_include = 10
+frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include }
+
+frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
+filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]) for frame_frequencies in frequencies_all_frames]
+frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
+file_freqs.write(json.dumps(frequencies_result))
+file_freqs.close()

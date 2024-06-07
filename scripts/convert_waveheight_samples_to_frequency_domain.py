@@ -7,6 +7,8 @@ class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        elif np.iscomplexobj(obj):
+            return abs(obj)
         return JSONEncoder.default(self, obj)
 
 directory = "/home/emil/workspace/GoneSurfingScripts"

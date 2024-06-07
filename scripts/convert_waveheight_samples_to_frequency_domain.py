@@ -8,8 +8,6 @@ class NumpyArrayEncoder(JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         elif np.iscomplexobj(obj):
-            # TODO: This is a hack. We should probably return the real and imaginary parts separately.
-            # print("converting complex number to real and imaginary parts",obj, np.real(obj), np.imag(obj)) 
             return [np.real(obj), np.imag(obj)]
         return JSONEncoder.default(self, obj)
 
@@ -23,10 +21,10 @@ output_filename_freqs = "wave_frequencies_subset.json"
 output_filepath_freqs = os.path.join(directory, output_filename_freqs)
 file_freqs = open(output_filepath_freqs, "w")
 number_of_frequencies_to_include = 10
-frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include }
+frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include, "len_x": len(samples[0]), "len_y": len(samples[0][0])}
 
 # This is the number of low frequency frequencies, and high frequency frequencies to include. They are by coincidence the same number.
-number_of_freqs = 15
+number_of_freqs = 30
 frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
 filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]) for frame_frequencies in frequencies_all_frames]
 frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames

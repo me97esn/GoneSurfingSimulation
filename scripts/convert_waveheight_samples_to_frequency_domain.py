@@ -9,7 +9,8 @@ class NumpyArrayEncoder(JSONEncoder):
             return obj.tolist()
         elif np.iscomplexobj(obj):
             # TODO: This is a hack. We should probably return the real and imaginary parts separately.
-            return abs(obj)
+            # print("converting complex number to real and imaginary parts",obj, np.real(obj), np.imag(obj)) 
+            return [np.real(obj), np.imag(obj)]
         return JSONEncoder.default(self, obj)
 
 directory = "/home/emil/workspace/GoneSurfingScripts"

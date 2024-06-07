@@ -1,6 +1,13 @@
 import numpy as np
 import json
 import os
+from json import JSONEncoder
+
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
 
 directory = "/home/emil/workspace/GoneSurfingScripts"
 filename = "wave_samples.json"
@@ -19,5 +26,5 @@ number_of_freqs = 15
 frequencies_all_frames = [np.fft.fftn(frame) for frame in samples]
 filtered_frequencies_all_frames = [np.array([[z for zi, z in enumerate(arr) if zi < number_of_freqs or zi >= len(arr)-number_of_freqs] for arr in frame_frequencies]) for frame_frequencies in frequencies_all_frames]
 frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
-file_freqs.write(json.dumps(frequencies_result))
+file_freqs.write(json.dumps(frequencies_result, cls=NumpyArrayEncoder))
 file_freqs.close()

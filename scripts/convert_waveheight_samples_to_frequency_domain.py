@@ -20,7 +20,7 @@ samples = json.load(f)
 output_filename_freqs = "wave_frequencies_subset.json"
 output_filepath_freqs = os.path.join(directory, output_filename_freqs)
 file_freqs = open(output_filepath_freqs, "w")
-number_of_frequencies_to_include = 10
+number_of_frequencies_to_include = 20 
 frequencies_result = {"number_of_frequencies_to_include": number_of_frequencies_to_include, "len_x": len(samples[0]), "len_y": len(samples[0][0])}
 
 # This is the number of low frequency frequencies, and high frequency frequencies to include. They are by coincidence the same number.

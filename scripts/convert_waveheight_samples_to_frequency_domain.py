@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+import sys
 from json import JSONEncoder
 
 class NumpyArrayEncoder(JSONEncoder):
@@ -11,18 +12,14 @@ class NumpyArrayEncoder(JSONEncoder):
             return [np.real(obj), np.imag(obj)]
         return JSONEncoder.default(self, obj)
 
-# TODO: pass these as arguments
-number_of_frequencies_to_include = 30
-number_of_rows_to_include = 30
+number_of_frequencies_to_include = int(sys.argv[3]) or 10
+number_of_rows_to_include = int(sys.argv[4]) or 10
 
-directory = "/home/emil/workspace/GoneSurfingScripts"
-filename = "wave_samples.json"
-filename = os.path.join(directory, filename)
+filename = sys.argv[1] 
 f = open(filename, "r")
 samples = json.load(f)
 
-output_filename_freqs = "wave_frequencies_subset.json"
-output_filepath_freqs = os.path.join(directory, output_filename_freqs)
+output_filepath_freqs = sys.argv[2] 
 file_freqs = open(output_filepath_freqs, "w")
 frequencies_result = {
     "number_of_frequencies_to_include": number_of_frequencies_to_include,

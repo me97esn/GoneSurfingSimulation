@@ -53,15 +53,8 @@ For the water velocities, bjson files are read.
 
 ## Water height
 
-For water height, x3d files are read. Therefor a different script is used then for the wave forces.
-
-1. The scripts append data to the target json files. The first step if these files should be newly created is to delete the old target json files. These are specified in the ./convert_x3d_files_to_ue4_datatable.sh file
 1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
-1. Choose the water surface and modyfy the modifier: remesh to have the amount of resolution I prefer. The higher the less data, but make sure that the slopes are still close to the original, and that no part of the water surface disappears. I should probably have adaptivity:0
-1. Open the file ./export_selection_as_x3d.py, change the start_frame and end_frame and copy the content.
-1. In blender, select the fluid surface, click on Scripting and paste the content from the line above
+1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Then copy the content.
+1. In blender, click on Scripting and paste the content from the line above
 1. Press enter twice to start the export
-1. If the exported x3d files becomes too large to include in one json file, split them over multiple directories and adjust the script convert_x3d_files_to_ue4_datatable.sh accordingly
-1. Open the file ./convert_x3d_files_to_ue4_datatable.sh and make sure that the url is the same one exported in the above step, and run it
-   Note: I've noticed that if the generated json file is too large (500Mb in my case) I get an "infinite loop" error when playing in UE4.
-1. In ue4, import the file as "WaveVerticesLocations_Struct"
+1. After the export is finished: run the script convert_waveheight_samples_to_frequency_domain.sh to export another json file, with fourier transformed data

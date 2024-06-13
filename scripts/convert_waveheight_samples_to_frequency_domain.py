@@ -40,6 +40,7 @@ for frame in range(len( filtered_frequencies_all_frames)):
         if y < number_of_rows_to_include or y >= len( filtered_frequencies_all_frames[frame])-number_of_rows_to_include:
             frame_data.append(filtered_frequencies_all_frames[frame][y])
 
+# frequencies_result["frequencies_per_frame"] = filtered_frequencies_all_frames
 frequencies_result["frequencies_per_frame"] = double_filtered_freqs 
 file_freqs.write(json.dumps(frequencies_result, cls=NumpyArrayEncoder))
 file_freqs.close()

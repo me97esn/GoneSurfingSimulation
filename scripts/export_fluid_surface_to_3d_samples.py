@@ -3,7 +3,7 @@ import json
 target_object = bpy.data.objects['fluid_surface']
 start_frame = 752
 end_frame = 1325
-# end_frame = 754
+# end_frame = 800
 scn = bpy.context.scene
 
 output_directory = "/home/emil/workspace/GoneSurfingScripts"
@@ -14,7 +14,7 @@ samples = []
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    step = 2
+    step = 2 
     y_length = 350
     x_length = 160
     start_trace_x = -60

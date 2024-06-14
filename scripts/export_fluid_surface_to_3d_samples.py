@@ -30,7 +30,7 @@ for frame in range(start_frame, end_frame+1):
             sample = location.z
             row.append(sample)
         frame_samples.append(row)
-    samples.append(frame_samples)
+    samples["samples"].append(frame_samples)
 
 file.write(json.dumps(samples))
 file.close()

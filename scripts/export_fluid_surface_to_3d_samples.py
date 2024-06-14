@@ -5,16 +5,15 @@ start_frame = 752
 end_frame = 1325
 # end_frame = 800
 scn = bpy.context.scene
-
+step = 0.5
 output_directory = "/home/emil/workspace/GoneSurfingScripts"
 output_filename = "wave_samples.json"
 output_filepath = os.path.join(output_directory, output_filename)
 file = open(output_filepath, "w")
-samples = []
+samples = {"step_size":step, "samples":[]}
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
-    step = 0.5 
     y_length = 350
     x_length = 160
     start_trace_x = -60

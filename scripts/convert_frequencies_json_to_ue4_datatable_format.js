@@ -5,11 +5,10 @@ const content = fs.readFileSync(sourceFileURL, {
   flag: "r",
 });
 const sourceData = JSON.parse(content);
-console.log(sourceData.frequencies_per_frame.length);
 const result = [];
 let i = 0;
 // TODO: should the frames start with 0 or 1?
-for (let frequency2darray in sourceData.frequencies_per_frame) {
+for (let frequency2darray of sourceData.frequencies_per_frame) {
   const frequencies = [];
   result.push({
     Name: `Frame_${i}`,
@@ -21,13 +20,15 @@ for (let frequency2darray in sourceData.frequencies_per_frame) {
     len_y: sourceData.len_y,
     frequencies_this_frame: frequencies,
   });
-  for (let row in frequency2darray) {
-    const encapsulatingObj = { arr: [] };
-    encapsulatingObj.arr.push(row);
+  for (let row of frequency2darray) {
+    const encapsulatingObj = {
+      arr: row.map(([real, imaginary]) => ({ real, imaginary })),
+    };
     frequencies.push(encapsulatingObj);
   }
 
   i++;
+  break;
 }
 
 console.log(JSON.stringify(result, null, 2));

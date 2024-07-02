@@ -10,7 +10,7 @@ output_directory = "/home/emil/workspace/GoneSurfingScripts"
 output_filename = "wave_samples.json"
 output_filepath = os.path.join(output_directory, output_filename)
 file = open(output_filepath, "w")
-samples = {"step_size":step, "samples":[]}
+samples = {"step_size":step, "samples":[], "start_frame":start_frame, "end_frame":end_frame}
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []

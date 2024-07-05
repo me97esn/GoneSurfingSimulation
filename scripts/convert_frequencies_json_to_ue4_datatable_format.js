@@ -7,6 +7,9 @@ const content = fs.readFileSync(sourceFileURL, {
 const sourceData = JSON.parse(content);
 const result = [];
 let i = 0;
+function trimFloat(float, num_of_decimals = 2) {
+  return parseFloat(float.toFixed(num_of_decimals));
+}
 for (let frequency2darray of sourceData.frequencies_per_frame) {
   const frequencies = [];
   result.push({
@@ -23,7 +26,10 @@ for (let frequency2darray of sourceData.frequencies_per_frame) {
   });
   for (let row of frequency2darray) {
     const encapsulatingObj = {
-      arr: row.map(([real, imaginary]) => ({ re: real, im: imaginary })),
+      arr: row.map(([real, imaginary]) => ({
+        re: trimFloat(real),
+        im: trimFloat(imaginary),
+      })),
     };
     frequencies.push(encapsulatingObj);
   }

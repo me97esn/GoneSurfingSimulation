@@ -23,7 +23,7 @@ for (let frequency2darray of sourceData.frequencies_per_frame) {
   });
   for (let row of frequency2darray) {
     const encapsulatingObj = {
-      arr: row.map(([real, imaginary]) => ({ real, imaginary })),
+      arr: row.map(([real, imaginary]) => ({ re: real, im: imaginary })),
     };
     frequencies.push(encapsulatingObj);
   }

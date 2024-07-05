@@ -24,6 +24,7 @@ output_filepath_freqs = sys.argv[2]
 file_freqs = open(output_filepath_freqs, "w")
 frequencies_result = {
     "step_size": samples_data["step_size"],
+    "start_frame": samples_data["start_frame"],
     "number_of_frequencies_to_include": number_of_frequencies_to_include,
     "number_of_rows_to_include": number_of_rows_to_include,
     "len_x": len(samples[0]),

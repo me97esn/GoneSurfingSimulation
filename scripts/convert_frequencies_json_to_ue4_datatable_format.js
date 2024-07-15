@@ -48,7 +48,7 @@ fs.writeFileSync(resultFileUri, JSON.stringify(result, null, 2), {
   encoding: "utf8",
   flag: "w",
 });
-
+console.log(`Writing to ${resultFileMetadataUri}`);
 fs.writeFileSync(resultFileMetadataUri, JSON.stringify(metadata, null, 2), {
   encoding: "utf8",
   flag: "w",

@@ -19,6 +19,8 @@ for (let frequency2darray of sourceData.frequencies_per_frame) {
     num_of_f: sourceData.number_of_frequencies_to_include,
     // Number of rows to include
     num_of_r: sourceData.number_of_rows_to_include,
+    st_x: sourceData.start_trace_x,
+    st_y: sourceData.start_trace_y,
     l_x: sourceData.len_x,
     l_y: sourceData.len_y,
     // frequencies this frame

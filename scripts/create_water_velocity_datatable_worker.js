@@ -1,8 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 
-console.log("Worker started");
-
 const flip_fluid_cache_folder = "/ssd3/flip_fluid_cache/";
 const source_folder_name = "flip_fluid_cache_5";
 
@@ -76,4 +74,5 @@ for (let i = 0; i < numberOfVertices; i++) {
   result.y_values.push(ue4Y);
   result.z_values.push(ue4Z);
 }
+console.log("done with ", fileName);
 parentPort.postMessage({ result });

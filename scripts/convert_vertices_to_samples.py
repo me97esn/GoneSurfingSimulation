@@ -6,19 +6,31 @@ from os.path import isfile, join
 from scipy.interpolate import griddata
 import numpy as np
 import math
+import os
+from json import JSONEncoder
 
-folder = sys.argv[1]
 
-onlyfiles = [f for f in listdir(folder) if isfile(join(folder, f))]
+# Create a function to be called while serializing JSON
+
+
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.int64):
+            return int(obj)
+        return JSONEncoder.default(self, obj)
+
+source_folder = sys.argv[1]
+target_folder = sys.argv[2]
+
+onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
 smallest_x = None
-step_size = 10
-# Opening JSON file
+step_size = 1
 for file in onlyfiles:
-    f = open(f"{folder}/{file}")
+    f = open(f"{source_folder}/{file}")
 
-    # returns JSON object as 
-    # a dictionary
     data = json.load(f)
     data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
     data_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
@@ -37,21 +49,21 @@ for file in onlyfiles:
         sample_x_coords = np.arange(math.ceil(smallest_x+border),math.floor(largest_x-border),step_size)
         sample_y_coords = np.arange(math.ceil(smallest_y+border),math.floor(largest_y-border),step_size)
         sample_coords=[[j,i] for i in sample_y_coords for j in sample_x_coords]
-        print('sample_coords', sample_coords)
 
-    grid = griddata(data['coordinates'], data['x_values'], np.array(sample_coords), method='cubic', fill_value=0)
-    print(grid)
-#     # Closing file
+    grid_x = griddata(data['coordinates'], data['x_values'], np.array(sample_coords), method='cubic', fill_value=0)
+    grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
+    grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
+    
+    if not os.path.exists(target_folder):
+        os.mkdir(target_folder) 
+    target_file = open(f"{target_folder}/{file}", "w")
+    result = {
+        'coordinates': sample_coords, 
+        'x_values': grid_x,
+        'y_values': grid_y,
+        'z_values': grid_z
+    }
+    print('writing to file', f"{target_folder}/{file}")
+    target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
+    target_file.close()
     f.close()
-#
-# # # returns JSON object as 
-# # # a dictionary
-# # data = json.load(f)
-# #
-# # # Iterating through the json
-# # # list
-# # for i in data['emp_details']:
-# #     print(i)
-# #
-# # # Closing file
-# # f.close()

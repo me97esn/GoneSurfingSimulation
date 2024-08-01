@@ -27,7 +27,7 @@ const bytesPerNumber = 4;
 let offset = 0;
 
 for (let i = 0; i < numberOfVertices; i++) {
-  if (i === 400) {
+  if (i === 3000) {
     break;
   }
 
@@ -70,9 +70,9 @@ for (let i = 0; i < numberOfVertices; i++) {
    */
   // const key = `F${parseFloat(timeStr)}Y${floorY.toFixed(0)}Z${floorZ.toFixed(0)}`
   result.coordinates.push([ue4Y, ue4Z]);
-  result.x_values.push(ue4X);
-  result.y_values.push(ue4Y);
-  result.z_values.push(ue4Z);
+  result.x_values.push(ue4blurX);
+  result.y_values.push(ue4blurY);
+  result.z_values.push(ue4blurZ);
 }
 console.log("done with ", fileName);
 parentPort.postMessage({ result });

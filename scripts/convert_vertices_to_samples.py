@@ -56,14 +56,15 @@ for file in onlyfiles:
     
     if not os.path.exists(target_folder):
         os.mkdir(target_folder) 
-    target_file = open(f"{target_folder}/{file}", "w")
+    target_file = open(f"{target_folder}/{file}_x_samples.json", "w")
     result = {
         'coordinates': sample_coords, 
         'x_values': grid_x,
         'y_values': grid_y,
         'z_values': grid_z
     }
-    print('writing to file', f"{target_folder}/{file}")
+    print('writing to file', f"{target_folder}/x_samples_{file}.json")
+    print(json.dumps(result, cls=NumpyArrayEncoder))
     target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
     target_file.close()
     f.close()

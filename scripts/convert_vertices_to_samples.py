@@ -27,7 +27,7 @@ target_folder = sys.argv[2]
 onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
 smallest_x = None
-step_size = 1
+step_size = 0.5
 for file in onlyfiles:
     f = open(f"{source_folder}/{file}")
 

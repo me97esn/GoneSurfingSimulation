@@ -89,7 +89,10 @@ for frame in range(start_frame, end_frame+1):
 # {"step_size": 100, "samples": [[[17.39013671875, 17.326210021972656, 15.935287475585938]], [[17.390716552734375, 17.321426391601562, 15.921951293945312]], [[17.390487670898438, 17.316307067871094, 15.914993286132812]], [[17.3892822265625, 17.31640625, 15.87310791015625]], [[17.388229370117188, 17.321388244628906, 15.882888793945312]], [[17.389022827148438, 17.326515197753906, 15.883934020996094]], [[17.38909149169922, 17.322525024414062, 15.933441162109375]], [[17.388580322265625, 17.32244110107422, 15.94232177734375]], [[17.387252807617188, 17.315940856933594, 15.939109802246094]]], "start_frame": 752, "end_frame": 760, "start_trace_x": -60, "start_trace_y": -200, "x_length": 160, "y_length": 350}
 
 result = {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": -1, "y_length": -1}
+if not os.path.exists(target_folder):
+    os.mkdir(target_folder) 
+target_file = open(f"{target_folder}/x_samples.json", "w")
+print('writing to', f"{target_folder}/x_samples.json")
 
-print('result', result)
-# target_file = open(f"{target_folder}/x_samples.json", "w")
-# target_file.close() 
+target_file.write(json.dumps(result))
+target_file.close() 

@@ -28,6 +28,7 @@ onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))
 
 smallest_x = None
 step_size = 0.5
+samples_dict_per_frame = {}
 for file in onlyfiles:
     f = open(f"{source_folder}/{file}")
 
@@ -55,9 +56,9 @@ for file in onlyfiles:
     grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
     
-    if not os.path.exists(target_folder):
-        os.mkdir(target_folder) 
-    target_file = open(f"{target_folder}/{file}_x_samples.json", "w")
+    # if not os.path.exists(target_folder):
+    #     os.mkdir(target_folder) 
+    # target_file = open(f"{target_folder}/{file}_x_samples.json", "w")
     result = {
         'coordinates': sample_coords, 
         'x_values': grid_x,
@@ -68,17 +69,22 @@ for file in onlyfiles:
 
     # Restructure the data to use the same format as the wave height data
     # TODO Only x values now, should do the same for y and z
+    # TODO: is now 2d array, but should be 3d. Is that because the array contains all of the frames, but I only use one file here?
     samples_per_x_coord = {}
     for x in sample_x_coords:
         samples_per_x_coord[x] = []
-    print(sample_coords) 
     for i, sample in enumerate(result['x_values']):
         coord = sample_coords[i]
         samples_per_x_coord[coord[0]].append(sample)
         # print(i, sample, coord)
-    print('samples_per_x_coord', samples_per_x_coord)
-    print('writing to file', f"{target_folder}/x_samples_{file}.json")
+    reformatted_result = []
+    for x in samples_per_x_coord:
+        reformatted_result.append(samples_per_x_coord[x])
+    samples_dict_per_frame[int(file.replace('.json', ''))] = reformatted_result
+    # print('writing to file', f"{target_folder}/x_samples_{file}.json")
     # print(json.dumps(result, cls=NumpyArrayEncoder))
-    target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
-    target_file.close()
-    f.close()
+    # target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
+    # target_file.close()
+    # f.close()
+# Done with reading all files, now write the samples to one file
+print('samples_dict_per_frame', samples_dict_per_frame)

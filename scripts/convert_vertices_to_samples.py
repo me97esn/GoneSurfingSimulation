@@ -90,7 +90,7 @@ for frame in range(start_frame, end_frame+1):
 
 result = {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": -1, "y_length": -1}
 if not os.path.exists(target_folder):
-    os.mkdir(target_folder) 
+    os.mkdir(target_folder)
 target_file = open(f"{target_folder}/x_samples.json", "w")
 print('writing to', f"{target_folder}/x_samples.json")
 

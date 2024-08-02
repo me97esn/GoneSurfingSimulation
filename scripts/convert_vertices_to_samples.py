@@ -23,6 +23,8 @@ class NumpyArrayEncoder(JSONEncoder):
 
 source_folder = sys.argv[1]
 target_folder = sys.argv[2]
+start_frame = int(sys.argv[3])
+end_frame = int(sys.argv[4])
 
 onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
@@ -59,21 +61,14 @@ for file in onlyfiles:
     # if not os.path.exists(target_folder):
     #     os.mkdir(target_folder) 
     # target_file = open(f"{target_folder}/{file}_x_samples.json", "w")
-    result = {
-        'coordinates': sample_coords, 
-        'x_values': grid_x,
-        'y_values': grid_y,
-        'z_values': grid_z
-    }
-
 
     # Restructure the data to use the same format as the wave height data
     # TODO Only x values now, should do the same for y and z
-    # TODO: is now 2d array, but should be 3d. Is that because the array contains all of the frames, but I only use one file here?
+    # The files are probably not read in the correct order, so we need to restructure the data
     samples_per_x_coord = {}
     for x in sample_x_coords:
         samples_per_x_coord[x] = []
-    for i, sample in enumerate(result['x_values']):
+    for i, sample in enumerate(grid_x):
         coord = sample_coords[i]
         samples_per_x_coord[coord[0]].append(sample)
         # print(i, sample, coord)
@@ -81,10 +76,20 @@ for file in onlyfiles:
     for x in samples_per_x_coord:
         reformatted_result.append(samples_per_x_coord[x])
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformatted_result
-    # print('writing to file', f"{target_folder}/x_samples_{file}.json")
-    # print(json.dumps(result, cls=NumpyArrayEncoder))
-    # target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
-    # target_file.close()
-    # f.close()
 # Done with reading all files, now write the samples to one file
-print('samples_dict_per_frame', samples_dict_per_frame)
+# print('samples_dict_per_frame', samples_dict_per_frame)
+
+output_samples = []
+for frame in range(start_frame, end_frame+1):
+    if frame not in samples_dict_per_frame:
+        print('frame not in samples_dict_per_frame')
+        continue
+    output_samples.append(samples_dict_per_frame[frame])
+
+# {"step_size": 100, "samples": [[[17.39013671875, 17.326210021972656, 15.935287475585938]], [[17.390716552734375, 17.321426391601562, 15.921951293945312]], [[17.390487670898438, 17.316307067871094, 15.914993286132812]], [[17.3892822265625, 17.31640625, 15.87310791015625]], [[17.388229370117188, 17.321388244628906, 15.882888793945312]], [[17.389022827148438, 17.326515197753906, 15.883934020996094]], [[17.38909149169922, 17.322525024414062, 15.933441162109375]], [[17.388580322265625, 17.32244110107422, 15.94232177734375]], [[17.387252807617188, 17.315940856933594, 15.939109802246094]]], "start_frame": 752, "end_frame": 760, "start_trace_x": -60, "start_trace_y": -200, "x_length": 160, "y_length": 350}
+
+result = {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": -1, "y_length": -1}
+
+print('result', result)
+# target_file = open(f"{target_folder}/x_samples.json", "w")
+# target_file.close() 

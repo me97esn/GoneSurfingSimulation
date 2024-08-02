@@ -93,6 +93,5 @@ if not os.path.exists(target_folder):
     os.mkdir(target_folder)
 target_file = open(f"{target_folder}/x_samples.json", "w")
 print('writing to', f"{target_folder}/x_samples.json")
-print('result', result)
 target_file.write(json.dumps(result))
 target_file.close() 

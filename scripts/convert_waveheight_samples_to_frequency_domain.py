@@ -11,7 +11,6 @@ class NumpyArrayEncoder(JSONEncoder):
         elif np.iscomplexobj(obj):
             return [np.real(obj), np.imag(obj)]
         return JSONEncoder.default(self, obj)
-print(sys.argv)
 number_of_frequencies_to_include = int(sys.argv[3]) or 10
 number_of_rows_to_include = int(sys.argv[4]) or 10
 

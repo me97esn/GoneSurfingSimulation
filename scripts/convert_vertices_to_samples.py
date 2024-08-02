@@ -74,18 +74,31 @@ for file in onlyfiles:
     x_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
     y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
     z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)
-    # Done with reading all files, now write the samples to one file
 
-output_samples = []
-for frame in range(start_frame, end_frame+1):
-    if frame not in x_samples_dict_per_frame:
-        print('frame not in x_samples_dict_per_frame')
-        continue
-    output_samples.append(x_samples_dict_per_frame[frame])
+def format_samples_to_ue4_struct_format(data_dict):
+    output_samples = []
+    for frame in range(start_frame, end_frame+1):
+        if frame not in data_dict:
+            print(f"Frame {frame} not found in data_dict")
+            continue
+        output_samples.append(data_dict[frame])
+     
+    return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
 
-result = {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
 if not os.path.exists(target_folder):
     os.mkdir(target_folder)
-target_file = open(f"{target_folder}/x_samples.json", "w")
-target_file.write(json.dumps(result))
-target_file.close() 
+
+
+target_x_file = open(f"{target_folder}/x_samples.json", "w")
+target_x_file.write(json.dumps(format_samples_to_ue4_struct_format(x_samples_dict_per_frame)))
+target_x_file.close()
+
+target_y_file = open(f"{target_folder}/y_samples.json", "w")
+target_y_file.write(json.dumps(format_samples_to_ue4_struct_format(y_samples_dict_per_frame)))
+target_y_file.close()
+
+target_z_file = open(f"{target_folder}/z_samples.json", "w")
+target_z_file.write(json.dumps(format_samples_to_ue4_struct_format(z_samples_dict_per_frame)))
+target_z_file.close()
+
+

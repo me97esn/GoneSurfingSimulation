@@ -50,6 +50,7 @@ for file in onlyfiles:
         sample_y_coords = np.arange(math.ceil(smallest_y+border),math.floor(largest_y-border),step_size)
         sample_coords=[[j,i] for i in sample_y_coords for j in sample_x_coords]
 
+
     grid_x = griddata(data['coordinates'], data['x_values'], np.array(sample_coords), method='cubic', fill_value=0)
     grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
@@ -63,8 +64,21 @@ for file in onlyfiles:
         'y_values': grid_y,
         'z_values': grid_z
     }
+
+
+    # Restructure the data to use the same format as the wave height data
+    # TODO Only x values now, should do the same for y and z
+    samples_per_x_coord = {}
+    for x in sample_x_coords:
+        samples_per_x_coord[x] = []
+    print(sample_coords) 
+    for i, sample in enumerate(result['x_values']):
+        coord = sample_coords[i]
+        samples_per_x_coord[coord[0]].append(sample)
+        # print(i, sample, coord)
+    print('samples_per_x_coord', samples_per_x_coord)
     print('writing to file', f"{target_folder}/x_samples_{file}.json")
-    print(json.dumps(result, cls=NumpyArrayEncoder))
+    # print(json.dumps(result, cls=NumpyArrayEncoder))
     target_file.write(json.dumps(result, cls=NumpyArrayEncoder))
     target_file.close()
     f.close()

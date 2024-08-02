@@ -46,8 +46,6 @@ async function run() {
     const worker = await workers[time];
     result[time] = worker.result;
   }
-  // TODO: write to one out file per in file
-  //console.log(JSON.stringify(result, null, 2));
   for (const time in result) {
     const resultFileUri = path.join(resultFolder, `${time}.json`);
     console.log(`Writing file ${resultFileUri}`);

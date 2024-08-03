@@ -51,6 +51,8 @@ for file in onlyfiles:
         sample_x_coords = np.arange(math.ceil(smallest_x+border),math.floor(largest_x-border),step_size)
         sample_y_coords = np.arange(math.ceil(smallest_y+border),math.floor(largest_y-border),step_size)
         sample_coords=[[j,i] for i in sample_y_coords for j in sample_x_coords]
+        # print('sample_x_coords', sample_x_coords)
+        # print('sample_y_coords', sample_y_coords)
 
 
     grid_x = griddata(data['coordinates'], data['x_values'], np.array(sample_coords), method='cubic', fill_value=0)

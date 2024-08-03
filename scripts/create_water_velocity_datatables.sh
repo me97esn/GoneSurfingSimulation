@@ -1,6 +1,9 @@
 #! /bin/bash
 start_frame=752
-end_frame=1325
+end_frame=760 #1325
+
+mkdir -p /tmp/medium_wave_left_water_velocities
+mkdir -p /tmp/medium_wave_left_water_velocities_samples
 
 # Split into multiple calls since nodejs runs out of memory
 for (( k = $start_frame; k < end_frame+100; k+=100 )); do
@@ -17,7 +20,9 @@ for (( k = $start_frame; k < end_frame+100; k+=100 )); do
   node -max-old-space-size=32768 create_water_velocity_datatable.js /tmp/medium_wave_left_water_velocities $local_start_frame $local_end_frame
 done
 
-python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples $start_frame $end_frame
+python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/x_samples.json $start_frame $end_frame x_values 
+python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/y_samples.json $start_frame $end_frame y_values
+python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/z_samples.json $start_frame $end_frame z_values
 
 python3 convert_waveheight_samples_to_frequency_domain.py /tmp/medium_wave_left_water_velocities_samples/x_samples.json /tmp/medium_wave_left_water_velocities_samples/x_frequencies.json 25 120
 python3 convert_waveheight_samples_to_frequency_domain.py /tmp/medium_wave_left_water_velocities_samples/y_samples.json /tmp/medium_wave_left_water_velocities_samples/y_frequencies.json 25 120

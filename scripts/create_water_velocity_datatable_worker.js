@@ -27,9 +27,9 @@ const bytesPerNumber = 4;
 let offset = 0;
 
 for (let i = 0; i < numberOfVertices; i++) {
-  //if (i === 4000) {
-  //  break;
-  //}
+  if (i === 4000) {
+    break;
+  }
 
   /***************
    * x values

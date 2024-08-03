@@ -19,20 +19,23 @@ class NumpyArrayEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 source_folder = sys.argv[1]
-target_folder = sys.argv[2]
+target_file = sys.argv[2]
 start_frame = int(sys.argv[3])
 end_frame = int(sys.argv[4])
+values = sys.argv[5]
 
 onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
 
 smallest_x = None
 step_size = 0.5
-x_samples_dict_per_frame = {}
-y_samples_dict_per_frame = {}
-z_samples_dict_per_frame = {}
+samples_dict_per_frame = {}
+# y_samples_dict_per_frame = {}
+# z_samples_dict_per_frame = {}
 for file in onlyfiles:
+    print(f"Processing {file}")
     f = open(f"{source_folder}/{file}")
+
 
     data = json.load(f)
     data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
@@ -56,9 +59,9 @@ for file in onlyfiles:
         # print('sample_y_coords', sample_y_coords)
 
 
-    grid_x = griddata(data['coordinates'], data['x_values'], np.array(sample_coords), method='cubic', fill_value=0)
-    grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
-    grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
+    grid_x = griddata(data['coordinates'], data[values], np.array(sample_coords), method='cubic', fill_value=0)
+    # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
+    # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
     def reformat_data(samples_grid):
         samples_per_x_coord = {}
@@ -74,9 +77,9 @@ for file in onlyfiles:
         # Restructure the data to use the same format as the wave height data
         # TODO Only x values now, should do the same for y and z
 
-    x_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
-    y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
-    z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)
+    samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
+    # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
+    # z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)
 
 def format_samples_to_ue4_struct_format(data_dict):
     output_samples = []
@@ -88,20 +91,16 @@ def format_samples_to_ue4_struct_format(data_dict):
      
     return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
 
-if not os.path.exists(target_folder):
-    os.mkdir(target_folder)
+file = open(target_file, "w")
+file.write(json.dumps(format_samples_to_ue4_struct_format(samples_dict_per_frame)))
+file.close()
 
-
-target_x_file = open(f"{target_folder}/x_samples.json", "w")
-target_x_file.write(json.dumps(format_samples_to_ue4_struct_format(x_samples_dict_per_frame)))
-target_x_file.close()
-
-target_y_file = open(f"{target_folder}/y_samples.json", "w")
-target_y_file.write(json.dumps(format_samples_to_ue4_struct_format(y_samples_dict_per_frame)))
-target_y_file.close()
-
-target_z_file = open(f"{target_folder}/z_samples.json", "w")
-target_z_file.write(json.dumps(format_samples_to_ue4_struct_format(z_samples_dict_per_frame)))
-target_z_file.close()
-
-
+# target_y_file = open(f"{target_folder}/y_samples.json", "w")
+# target_y_file.write(json.dumps(format_samples_to_ue4_struct_format(y_samples_dict_per_frame)))
+# target_y_file.close()
+#
+# target_z_file = open(f"{target_folder}/z_samples.json", "w")
+# target_z_file.write(json.dumps(format_samples_to_ue4_struct_format(z_samples_dict_per_frame)))
+# target_z_file.close()
+#
+#

@@ -1,4 +1,5 @@
-# Description: This script takes a folder of JSON files, each containing a list of vertices and their corresponding x values. It prepares the data for fourier transform by making sure that the coordinates for each sample are evenly distributed. The vertices are not, but fouriere transform requires evenly distributed samples. 
+# Description: This script takes a folder of JSON files, each containing a list of vertices and their corresponding x, y or z values. It prepares the data for fourier transform by making sure that the coordinates for each sample are evenly distributed. The vertices are not, but fouriere transform requires evenly distributed samples. 
+# This script also splits the data into x, y and z values, and saves them in separate files. This is to make it possible to fourier transform x, y and z values separately.
 import json
 import sys
 from os import listdir

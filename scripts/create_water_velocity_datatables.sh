@@ -1,10 +1,13 @@
 #! /bin/bash
 start_frame=752
-end_frame=760 #1325
+end_frame=1325
+folder1=/hdd/gone_surfing_exports/medium_wave_left
 
+mkdir -p $folder1
 mkdir -p /tmp/medium_wave_left_water_velocities
 mkdir -p /tmp/medium_wave_left_water_velocities_samples
 
+# Read the blur data files from blender/flip fluids, and convert them to human readable json
 # Split into multiple calls since nodejs runs out of memory
 for (( k = $start_frame; k < end_frame+100; k+=100 )); do
   local_start_frame=$k
@@ -19,16 +22,18 @@ for (( k = $start_frame; k < end_frame+100; k+=100 )); do
   echo "Creating water velocity datatable for frames $local_start_frame to $local_end_frame"
   node -max-old-space-size=32768 create_water_velocity_datatable.js /tmp/medium_wave_left_water_velocities $local_start_frame $local_end_frame
 done
-
+# Read the files from the previous step and convert them to evenly spread samples
 python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/x_samples.json $start_frame $end_frame x_values 
 python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/y_samples.json $start_frame $end_frame y_values
 python3 convert_vertices_to_samples.py /tmp/medium_wave_left_water_velocities /tmp/medium_wave_left_water_velocities_samples/z_samples.json $start_frame $end_frame z_values
 
+# Convert the samples from the previous step to frequency domain
 python3 convert_waveheight_samples_to_frequency_domain.py /tmp/medium_wave_left_water_velocities_samples/x_samples.json /tmp/medium_wave_left_water_velocities_samples/x_frequencies.json 25 120
 python3 convert_waveheight_samples_to_frequency_domain.py /tmp/medium_wave_left_water_velocities_samples/y_samples.json /tmp/medium_wave_left_water_velocities_samples/y_frequencies.json 25 120
 python3 convert_waveheight_samples_to_frequency_domain.py /tmp/medium_wave_left_water_velocities_samples/z_samples.json /tmp/medium_wave_left_water_velocities_samples/z_frequencies.json 25 120
 
-node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct_metadata.json
-node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct_metadata.json
-node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct_metadata.json
+# Convert the frequency domain files to UE4 datatable format
+node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder1/velocity_x_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder1/velocity_y_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js /tmp/medium_wave_left_water_velocities_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder1/velocity_z_frequencies_struct_metadata.json
 

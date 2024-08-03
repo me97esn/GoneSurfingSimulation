@@ -90,7 +90,7 @@ def format_samples_to_ue4_struct_format(data_dict):
         output_samples.append(data_dict[frame])
      
     return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
-
+print('writing to', target_file)
 file = open(target_file, "w")
 file.write(json.dumps(format_samples_to_ue4_struct_format(samples_dict_per_frame)))
 file.close()

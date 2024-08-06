@@ -7,8 +7,6 @@ const source_folder_name = "flip_fluid_cache_5";
 const { workerData, parentPort } = require("worker_threads");
 const { fileName } = workerData;
 
-// TODO: use param instead
-const minVectorLength = Math.pow(0.075, 2);
 const source_folder = path.join(flip_fluid_cache_folder, source_folder_name);
 const bakefiles_folder = path.join(source_folder, "bakefiles");
 
@@ -16,7 +14,13 @@ const match = fileName.match(/^(\d+).bobj/);
 const [, timeStr] = match;
 const time = parseFloat(timeStr);
 
-const result = { coordinates: [], x_values: [], y_values: [], z_values: [] };
+const result = {
+  coordinates: [],
+  x_values: [],
+  y_values: [],
+  z_values: [],
+  height: [],
+};
 const file = fs.readFileSync(path.join(bakefiles_folder, fileName), null);
 const blurFile = fs.readFileSync(
   path.join(bakefiles_folder, `blur${fileName}`),
@@ -70,9 +74,14 @@ for (let i = 0; i < numberOfVertices; i++) {
    */
   // const key = `F${parseFloat(timeStr)}Y${floorY.toFixed(0)}Z${floorZ.toFixed(0)}`
   result.coordinates.push([ue4Y, ue4Z]);
+
+  // velocities
   result.x_values.push(ue4BlurX);
   result.y_values.push(ue4BlurY);
   result.z_values.push(ue4BlurZ);
+
+  // Wave height
+  result.height.push(ue4X);
 }
 console.log("done with ", fileName);
 parentPort.postMessage({ result });

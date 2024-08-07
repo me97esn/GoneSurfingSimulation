@@ -30,6 +30,7 @@ onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))
 smallest_x = None
 step_size = 0.5
 samples_dict_per_frame = {}
+non_reformatted_samples_dict_per_frame = {}
 # y_samples_dict_per_frame = {}
 # z_samples_dict_per_frame = {}
 for file in onlyfiles:
@@ -75,9 +76,10 @@ for file in onlyfiles:
             reformatted_result.append(samples_per_x_coord[x])
         return reformatted_result
         # Restructure the data to use the same format as the wave height data
-        # TODO Only x values now, should do the same for y and z
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = grid_x
+
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
     # z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)
 
@@ -91,16 +93,11 @@ def format_samples_to_ue4_struct_format(data_dict):
      
     return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
 print('writing to', target_file)
+target_file_non_formatted = f"{target_file.replace('.json', '')}_non_formatted.json"
 file = open(target_file, "w")
+file_non_formatted = open(target_file_non_formatted, "w")
 file.write(json.dumps(format_samples_to_ue4_struct_format(samples_dict_per_frame)))
+print('writing to', target_file_non_formatted)
+file_non_formatted.write(json.dumps(non_reformatted_samples_dict_per_frame, cls=NumpyArrayEncoder))
 file.close()
 
-# target_y_file = open(f"{target_folder}/y_samples.json", "w")
-# target_y_file.write(json.dumps(format_samples_to_ue4_struct_format(y_samples_dict_per_frame)))
-# target_y_file.close()
-#
-# target_z_file = open(f"{target_folder}/z_samples.json", "w")
-# target_z_file.write(json.dumps(format_samples_to_ue4_struct_format(z_samples_dict_per_frame)))
-# target_z_file.close()
-#
-#

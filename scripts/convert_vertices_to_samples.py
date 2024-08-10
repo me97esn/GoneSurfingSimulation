@@ -59,8 +59,8 @@ for file in onlyfiles:
         # print('sample_x_coords', sample_x_coords)
         # print('sample_y_coords', sample_y_coords)
 
-
-    grid_x = griddata(data['coordinates'], data[values], np.array(sample_coords), method='cubic', fill_value=0)
+    out_coords = np.array(sample_coords)
+    grid_x = griddata(data['coordinates'], data[values], out_coords, method='cubic', fill_value=0)
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
@@ -78,7 +78,7 @@ for file in onlyfiles:
         # Restructure the data to use the same format as the wave height data
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
-    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = grid_x
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": out_coords} 
 
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
     # z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)

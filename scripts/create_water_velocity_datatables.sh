@@ -1,6 +1,7 @@
 #! /bin/bash
 start_frame=752
-end_frame=1325
+# end_frame=1325
+end_frame=754
 folder=/hdd/gone_surfing_exports/medium_wave_left
 tmp_folder=/hdd/gone_surfing_exports/medium_wave_left/tmp
 tmp_folder_samples=/hdd/gone_surfing_exports/medium_wave_left/tmp_samples
@@ -28,23 +29,23 @@ for (( k = $start_frame; k < end_frame+100; k+=100 )); do
   node -max-old-space-size=32768 create_water_velocity_datatable.js $tmp_folder $local_start_frame $local_end_frame
 done
 # Read the files from the previous step and convert them to evenly spread samples
-python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/x_samples.json $start_frame $end_frame x_values 
-python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/y_samples.json $start_frame $end_frame y_values
-python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/z_samples.json $start_frame $end_frame z_values
-python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/height.json $start_frame $end_frame height 
-
-
-# # Convert the samples from the previous step to frequency domain
-python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
-python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
-python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
-python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/height.json $tmp_folder_samples/height_frequencies.json 25 100
-
-# Convert the frequency domain files to UE4 datatable format
-node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json
-node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder/velocity_y_frequencies_struct_metadata.json
-node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder/velocity_z_frequencies_struct_metadata.json
-node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
-
-# TODO: Rename this file since it creates datatable for both velocities and height
-
+# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/x_samples.json $start_frame $end_frame x_values 
+# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/y_samples.json $start_frame $end_frame y_values
+# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/z_samples.json $start_frame $end_frame z_values
+# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/height.json $start_frame $end_frame height 
+#
+#
+# # # Convert the samples from the previous step to frequency domain
+# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
+# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
+# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
+# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/height.json $tmp_folder_samples/height_frequencies.json 25 100
+#
+# # Convert the frequency domain files to UE4 datatable format
+# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json
+# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder/velocity_y_frequencies_struct_metadata.json
+# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder/velocity_z_frequencies_struct_metadata.json
+# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
+#
+# # TODO: Rename this file since it creates datatable for both velocities and height
+#

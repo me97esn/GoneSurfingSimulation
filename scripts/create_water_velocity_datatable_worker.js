@@ -16,6 +16,9 @@ const time = parseFloat(timeStr);
 
 const result = {
   coordinates: [],
+  x_coordinates: [],
+  y_coordinates: [],
+  z_coordinates: [],
   x_values: [],
   y_values: [],
   z_values: [],
@@ -72,8 +75,10 @@ for (let i = 0; i < numberOfVertices; i++) {
    * Create the data
    *
    */
-  // const key = `F${parseFloat(timeStr)}Y${floorY.toFixed(0)}Z${floorZ.toFixed(0)}`
   result.coordinates.push([ue4Y, ue4Z]);
+  result.x_coordinates.push(ue4X);
+  result.y_coordinates.push(ue4Y);
+  result.z_coordinates.push(ue4Z);
 
   // velocities
   result.x_values.push(ue4BlurX);

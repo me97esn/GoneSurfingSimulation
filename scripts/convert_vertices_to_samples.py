@@ -41,16 +41,22 @@ for file in onlyfiles:
     data = json.load(f)
     data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
     data_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
+    sorted_values = sorted(data[values])
 
     if smallest_x is None:
         smallest_x = data_sorted_by_x[0][0]
         largest_x = data_sorted_by_x[-1][0]
         smallest_y = data_sorted_by_y[0][1]
         largest_y = data_sorted_by_y[-1][1]
-        # print('smallest_x', smallest_x)
-        # print('largest_x', largest_x)
-        # print('smallest_y', smallest_y)
-        # print('largest_y', largest_y)
+        largest_sample = sorted_values[-1]
+        smallest_sample = sorted_values[0]
+        print('smallest_x', smallest_x)
+        print('largest_x', largest_x)
+        print('smallest_y', smallest_y)
+        print('largest_y', largest_y)
+        print('largest_sample', largest_sample)
+        print('smallest_sample', smallest_sample)
+
 
         border = 10
         sample_x_coords = np.arange(math.ceil(smallest_x+border),math.floor(largest_x-border),step_size)
@@ -59,8 +65,14 @@ for file in onlyfiles:
         # print('sample_x_coords', sample_x_coords)
         # print('sample_y_coords', sample_y_coords)
 
-    out_coords = np.array(sample_coords)
-    grid_x = griddata(data['coordinates'], data[values], out_coords, method='cubic', fill_value=0)
+    # Filter out coords and values for vertices at the bottom. TODO: is this also needed for velocities, or are they only available at the surface?
+    in_coords = []
+    out_values = []
+    for i, coord in enumerate(data['coordinates']):
+        if data[values][i] >= 0:
+            in_coords.append(coord)
+            out_values.append(data[values][i])
+    grid_x = griddata(in_coords, out_values, sample_coords, method='cubic', fill_value=0)
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
@@ -78,7 +90,7 @@ for file in onlyfiles:
         # Restructure the data to use the same format as the wave height data
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
-    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": out_coords} 
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": sample_coords}
 
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
     # z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)

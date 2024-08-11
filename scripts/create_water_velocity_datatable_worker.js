@@ -32,7 +32,7 @@ const blurFile = fs.readFileSync(
 const numberOfVertices = file.readUInt32LE();
 const bytesPerNumber = 4;
 let offset = 0;
-
+//const key = F${parseFloat(timeStr)}Y${floorY.toFixed(0)}Z${floorZ.toFixed(0)}
 for (let i = 0; i < numberOfVertices; i++) {
   //if (i === 4000) {
   //  break;

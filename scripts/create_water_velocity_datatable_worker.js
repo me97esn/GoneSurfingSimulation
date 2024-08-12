@@ -73,17 +73,18 @@ for (let i = 0; i < numberOfVertices; i++) {
 
   /***************
    * Create the data
-   *
+   * Convert the coordinates to UE4/Matplotlib axis
    */
+
   result.coordinates.push([ue4Y, ue4Z]);
-  result.x_coordinates.push(ue4X);
-  result.y_coordinates.push(ue4Y);
-  result.z_coordinates.push(ue4Z);
+  result.x_coordinates.push(ue4Y);
+  result.y_coordinates.push(ue4Z);
+  result.z_coordinates.push(ue4X);
 
   // velocities
-  result.x_values.push(ue4BlurX);
-  result.y_values.push(ue4BlurY);
-  result.z_values.push(ue4BlurZ);
+  result.x_values.push(ue4BlurY);
+  result.y_values.push(ue4BlurZ);
+  result.z_values.push(ue4BlurX);
 
   // Wave height
   result.height.push(ue4X);

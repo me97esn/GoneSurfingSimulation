@@ -69,7 +69,7 @@ for file in onlyfiles:
     in_coords = []
     out_values = []
     for i, coord in enumerate(data['coordinates']):
-        if data[values][i] >= 0:
+        # if data[values][i] >= 0:
             in_coords.append(coord)
             out_values.append(data[values][i])
     grid_x = griddata(in_coords, out_values, sample_coords, method='cubic', fill_value=0)
@@ -90,7 +90,8 @@ for file in onlyfiles:
         # Restructure the data to use the same format as the wave height data
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
-    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": sample_coords}
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":data[values], "coordinates": in_coords}
+    # non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": sample_coords}
 
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
     # z_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_z)

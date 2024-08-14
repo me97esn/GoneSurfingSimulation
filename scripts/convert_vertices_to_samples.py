@@ -60,6 +60,24 @@ for file in onlyfiles:
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
+    def convert_grid_to_coordinates(grid_x, grid_y):
+        """
+        A grid has the form 
+grid_x: [[10.   10.   10.   10.   10.  ]
+ [10.25 10.25 10.25 10.25 10.25]
+ [10.5  10.5  10.5  10.5  10.5 ]
+ [10.75 10.75 10.75 10.75 10.75]
+ [11.   11.   11.   11.   11.  ]]
+grid_y: [[0.   0.25 0.5  0.75 1.  ]
+ [0.   0.25 0.5  0.75 1.  ]
+ [0.   0.25 0.5  0.75 1.  ]
+ [0.   0.25 0.5  0.75 1.  ]
+ [0.   0.25 0.5  0.75 1.  ]]
+, and we want to convert it to a list of coordinates, like this:
+[[10.0, 0.0], [10.25, 0.0], [10.5, 0.0], [10.75, 0.0], [11.0, 0.0], [10.0, 0.25], [10.25, 0.25], [10.5, 0.25], [10.75, 0.25], [11.0, 0.25], [10.0, 0.5], [10.25, 0.5], [10.5, 0.5], [10.75, 0.5], [11.0, 0.5], [10.0, 0.75], [10.25, 0.75], [10.5, 0.75], [10.75, 0.75], [11.0, 0.75], [10.0, 1.0], [10.25, 1.0], [10.5, 1.0], [10.75, 1.0], [11.0, 1.0]]
+        """
+        return [[grid_x[i][j], grid_y[i][j]] for i in range(len(grid_x)) for j in range(len(grid_x[0]))]
+
     def reformat_data(samples_grid):
         return samples_grid.tolist()
         # samples_per_x_coord = {}

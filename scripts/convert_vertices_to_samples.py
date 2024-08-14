@@ -50,47 +50,33 @@ for file in onlyfiles:
         largest_y = data_sorted_by_y[-1][1]
         largest_sample = sorted_values[-1]
         smallest_sample = sorted_values[0]
-        print('smallest_x', smallest_x)
-        print('largest_x', largest_x)
-        print('smallest_y', smallest_y)
-        print('largest_y', largest_y)
-        print('largest_sample', largest_sample)
-        print('smallest_sample', smallest_sample)
+        num_of_x = (largest_x - smallest_x) / step_size
+        num_of_y = (largest_y - smallest_y) / step_size
 
+    grid_x, grid_y = np.mgrid[smallest_x:largest_x:complex(0,num_of_x), smallest_y:largest_y:complex(0,num_of_y)]
 
-        border = 10
-        sample_x_coords = np.arange(math.ceil(smallest_x+border),math.floor(largest_x-border),step_size)
-        sample_y_coords = np.arange(math.ceil(smallest_y+border),math.floor(largest_y-border),step_size)
-        sample_coords=[[j,i] for i in sample_y_coords for j in sample_x_coords]
-        # print('sample_x_coords', sample_x_coords)
-        # print('sample_y_coords', sample_y_coords)
+    grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='nearest', fill_value=0)
 
-    # Filter out coords and values for vertices at the bottom. TODO: is this also needed for velocities, or are they only available at the surface?
-    in_coords = []
-    out_values = []
-    for i, coord in enumerate(data['coordinates']):
-        # if data[values][i] >= 0:
-            in_coords.append(coord)
-            out_values.append(data[values][i])
-    grid_x = griddata(in_coords, out_values, sample_coords, method='cubic', fill_value=0)
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
     def reformat_data(samples_grid):
-        samples_per_x_coord = {}
-        for x in sample_x_coords:
-            samples_per_x_coord[x] = []
-        for i, sample in enumerate(samples_grid):
-            coord = sample_coords[i]
-            samples_per_x_coord[coord[0]].append(sample)
-        reformatted_result = []
-        for x in samples_per_x_coord:
-            reformatted_result.append(samples_per_x_coord[x])
-        return reformatted_result
+        return samples_grid.tolist()
+        # samples_per_x_coord = {}
+        # for x in sample_x_coords:
+        #     samples_per_x_coord[x] = []
+        # for i, sample in enumerate(samples_grid):
+        #     coord = sample_coords[i]
+        #     samples_per_x_coord[coord[0]].append(sample)
+        # reformatted_result = []
+        # for x in samples_per_x_coord:
+        #     reformatted_result.append(samples_per_x_coord[x])
+        # return reformatted_result
         # Restructure the data to use the same format as the wave height data
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
-    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":data[values], "coordinates": in_coords}
+    # non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":data[values], "coordinates":data['coordinates']}
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_samples, "coordinates":[]} # TODO: Add coordinates
     # non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": sample_coords}
 
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
@@ -104,7 +90,7 @@ def format_samples_to_ue4_struct_format(data_dict):
             continue
         output_samples.append(data_dict[frame])
      
-    return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": sample_x_coords[0], "start_trace_y": sample_y_coords[0], "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
+    return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": smallest_x, "start_trace_y": smallest_y, "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
 print('writing to', target_file)
 target_file_non_formatted = f"{target_file.replace('.json', '')}_non_formatted.json"
 file = open(target_file, "w")

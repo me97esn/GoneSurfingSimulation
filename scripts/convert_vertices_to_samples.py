@@ -60,6 +60,13 @@ for file in onlyfiles:
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
 
+    def convert_grid_to_array_of_values(grid):
+        samples = []
+        for row in grid:
+            for sample in row:
+                samples.append(sample)
+        return samples
+
     def convert_grid_to_coordinates(grid_x, grid_y):
         """
         A grid has the form 
@@ -92,9 +99,10 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
         # return reformatted_result
         # Restructure the data to use the same format as the wave height data
 
-    samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
+    # samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_x)
     # non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":data[values], "coordinates":data['coordinates']}
-    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_samples, "coordinates":[]} # TODO: Add coordinates
+
+    non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":convert_grid_to_array_of_values(grid_samples), "coordinates":convert_grid_to_coordinates(grid_x, grid_y)}
     # non_reformatted_samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":grid_x, "coordinates": sample_coords}
 
     # y_samples_dict_per_frame[int(file.replace('.json', ''))] = reformat_data(grid_y)
@@ -109,12 +117,12 @@ def format_samples_to_ue4_struct_format(data_dict):
         output_samples.append(data_dict[frame])
      
     return {"step_size": step_size, "samples": output_samples, "start_frame": start_frame, "end_frame": end_frame, "start_trace_x": smallest_x, "start_trace_y": smallest_y, "x_length": int( largest_x - smallest_x ), "y_length": int( largest_y - smallest_y ) }
-print('writing to', target_file)
+# print('writing to', target_file)
+# file = open(target_file, "w")
+# file.write(json.dumps(format_samples_to_ue4_struct_format(samples_dict_per_frame)))
 target_file_non_formatted = f"{target_file.replace('.json', '')}_non_formatted.json"
-file = open(target_file, "w")
 file_non_formatted = open(target_file_non_formatted, "w")
-file.write(json.dumps(format_samples_to_ue4_struct_format(samples_dict_per_frame)))
 print('writing to', target_file_non_formatted)
 file_non_formatted.write(json.dumps(non_reformatted_samples_dict_per_frame, cls=NumpyArrayEncoder))
-file.close()
+# file.close()
 

@@ -55,7 +55,7 @@ for file in onlyfiles:
 
     grid_x, grid_y = np.mgrid[smallest_x:largest_x:complex(0,num_of_x), smallest_y:largest_y:complex(0,num_of_y)]
 
-    grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='nearest', fill_value=0)
+    grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='linear', fill_value=0)
 
     # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
     # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)

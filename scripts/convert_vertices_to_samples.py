@@ -26,9 +26,18 @@ values = sys.argv[5]
 
 onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
+def filterSamplesAboveMinValue(coordinates, values, minValue):
+    filtered_coordinates = []
+    filtered_values = []
+    for i, value in enumerate(values):
+        if value > minValue:
+            filtered_coordinates.append(coordinates[i])
+            filtered_values.append(value)
+    return filtered_coordinates, filtered_values
 
 smallest_x = None
 step_size = 0.5 
+minValue = 3
 samples_dict_per_frame = {}
 non_reformatted_samples_dict_per_frame = {}
 # y_samples_dict_per_frame = {}
@@ -41,22 +50,21 @@ for file in onlyfiles:
     data = json.load(f)
     data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
     data_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
-    sorted_values = sorted(data[values])
 
     if smallest_x is None:
         smallest_x = data_sorted_by_x[0][0]
         largest_x = data_sorted_by_x[-1][0]
         smallest_y = data_sorted_by_y[0][1]
         largest_y = data_sorted_by_y[-1][1]
-        largest_sample = sorted_values[-1]
-        smallest_sample = sorted_values[0]
         num_of_x = (largest_x - smallest_x) / step_size
         num_of_y = (largest_y - smallest_y) / step_size
 
-    border = 10
-    grid_x, grid_y = np.mgrid[smallest_x+border:largest_x-border:complex(0,num_of_x), smallest_y+border:largest_y-border:complex(0,num_of_y)]
+    coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
+    grid_x, grid_y = np.mgrid[smallest_x:largest_x:complex(0,num_of_x), smallest_y:largest_y:complex(0,num_of_y)]
 
-    grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='linear', fill_value=0)
+    grid_samples = griddata(coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold, (grid_x, grid_y), method='linear', fill_value=0)
+
+
 
     # TODO: ignore the samples that are outside the borders (3 directions).
     # Perhaps I should sort the values to get better results?

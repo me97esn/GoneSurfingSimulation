@@ -43,8 +43,6 @@ for (let i = 0; i < numberOfVertices; i++) {
   offset += bytesPerNumber;
   const x = file.readFloatLE(offset);
   const blur_x = blurFile.readFloatLE(offset);
-  const ue4Y = x;
-  const ue4BlurY = blur_x;
 
   /***************
    * y values
@@ -54,8 +52,6 @@ for (let i = 0; i < numberOfVertices; i++) {
   offset += bytesPerNumber;
   const y = file.readFloatLE(offset);
   const blur_y = blurFile.readFloatLE(offset);
-  const ue4Z = y;
-  const ue4BlurZ = blur_y;
 
   /***************
    * z values
@@ -65,33 +61,26 @@ for (let i = 0; i < numberOfVertices; i++) {
   offset += bytesPerNumber;
   const z = file.readFloatLE(offset);
   const blur_z = blurFile.readFloatLE(offset);
-  const ue4X = z;
-  const ue4BlurX = blur_z;
 
-  /***************
-   * Create the data
-   * Convert the coordinates to UE4/Matplotlib axis
-   */
-
-  result.coordinates.push([ue4Y, ue4Z]);
-  result.x_coordinates.push(ue4Y);
-  result.y_coordinates.push(ue4Z);
-  result.z_coordinates.push(ue4X);
+  result.coordinates.push([x, y]);
+  result.x_coordinates.push(x);
+  result.y_coordinates.push(y);
+  result.z_coordinates.push(z);
 
   // velocities
-  result.x_values.push(ue4BlurY);
-  result.y_values.push(ue4BlurZ);
-  result.z_values.push(ue4BlurX);
+  result.x_values.push(blur_x);
+  result.y_values.push(blur_y);
+  result.z_values.push(blur_z);
 
   // Wave height
-  result.height.push(ue4X);
+  result.height.push(z);
   vertices.push({
-    x: ue4X,
-    y: ue4Y,
-    z: ue4Z,
-    dx: ue4BlurX,
-    dy: ue4BlurY,
-    dz: ue4BlurZ,
+    x,
+    y,
+    z,
+    dx: blur_x,
+    dy: blur_y,
+    dz: blur_z,
   });
 }
 

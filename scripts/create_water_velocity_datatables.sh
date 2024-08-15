@@ -32,7 +32,7 @@ done
 # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/x_samples.json $start_frame $end_frame x_values 
 # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/y_samples.json $start_frame $end_frame y_values
 # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/z_samples.json $start_frame $end_frame z_values
-# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/height.json $start_frame $end_frame height 
+python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/height.json $start_frame $end_frame height 
 
 
 # # Convert the samples from the previous step to frequency domain

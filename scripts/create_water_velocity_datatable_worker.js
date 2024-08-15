@@ -87,7 +87,6 @@ for (let i = 0; i < numberOfVertices; i++) {
 // read triangels to calculate normals
 offset += bytesPerNumber;
 const numberOfTriangles = file.readUInt32LE(offset);
-console.log("numberOfTriangles", numberOfTriangles);
 for (let i = 0; i < numberOfTriangles; i++) {
   offset += bytesPerNumber;
   const a = file.readUInt32LE(offset);

@@ -40,6 +40,8 @@ step_size = 0.5
 minValue = 3
 samples_dict_per_frame = {}
 non_reformatted_samples_dict_per_frame = {}
+x_border=20
+y_border=60
 # y_samples_dict_per_frame = {}
 # z_samples_dict_per_frame = {}
 for file in onlyfiles:
@@ -60,7 +62,7 @@ for file in onlyfiles:
         num_of_y = (largest_y - smallest_y) / step_size
 
     coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
-    grid_x, grid_y = np.mgrid[smallest_x:largest_x:complex(0,num_of_x), smallest_y:largest_y:complex(0,num_of_y)]
+    grid_x, grid_y = np.mgrid[smallest_x+x_border:largest_x-x_border:complex(0,num_of_x), smallest_y+y_border:largest_y-y_border:complex(0,num_of_y)]
 
     grid_samples = griddata(coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold, (grid_x, grid_y), method='linear', fill_value=0)
 

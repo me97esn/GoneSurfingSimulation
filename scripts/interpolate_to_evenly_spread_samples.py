@@ -48,8 +48,6 @@ def filterSamplesAboveMinValue(coordinates, values, minValue):
 for file in onlyfiles:
     print(f"Processing {file}")
     f = open(f"{source_folder}/{file}")
-
-
     data = json.load(f)
     data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
     data_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
@@ -94,11 +92,12 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
 
     array_of_values = convert_grid_to_array_of_values(grid_samples)
     array_of_coordinates = convert_grid_to_coordinates(grid_x, grid_y)
+    two_d_array_of_values = np.array(array_of_values).reshape((int(num_of_x), int(num_of_y)))
 
-    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates}
+    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values}
 
 target_file = f"{target_file}"
 f = open(target_file , "w")
 print('writing to', target_file )
 f.write(json.dumps(samples_dict_per_frame, cls=NumpyArrayEncoder))
-
+# TODO: should I also add stuff to make fft possible for this file?

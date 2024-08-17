@@ -16,7 +16,31 @@ number_of_rows_to_include = int(sys.argv[4]) or 10
 
 filename = sys.argv[1] 
 f = open(filename, "r")
+
+## Expects data on the format:
+# {
+#     "start_trace_y": 0,
+#     "start_trace_x": 0,
+#     "step_size": 1,
+#     "start_frame": 0,
+#     "samples": [ # frame
+#         [ # row
+#             [0.1, 0.2, 0.3],# column
+#             [0.4, 0.5, 0.6],# column
+#             [0.7, 0.8, 0.9]# column
+#         ], # row
+#         [
+#             [0.1, 0.2, 0.3],# column
+#             [0.4, 0.5, 0.6],# column
+#             [0.7, 0.8, 0.9]# column
+#         ]
+#     ]
+# }
+# Note that no coordinates is in the data, this is because samples are evenly spread with step_size from start_trace_x and start_trace_y
+
+
 samples_data = json.load(f)
+
 samples = samples_data["samples"]
 
 output_filepath_freqs = sys.argv[2] 

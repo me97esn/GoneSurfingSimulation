@@ -67,13 +67,6 @@ for file in onlyfiles:
 
     grid_samples = griddata(coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold, (grid_x, grid_y), method='linear', fill_value=0)
 
-
-
-    # TODO: ignore the samples that are outside the borders (3 directions).
-    # Perhaps I should sort the values to get better results?
-    # grid_y = griddata(data['coordinates'], data['y_values'], np.array(sample_coords), method='cubic', fill_value=0)
-    # grid_z = griddata(data['coordinates'], data['z_values'], np.array(sample_coords), method='cubic', fill_value=0)
-
     def convert_grid_to_array_of_values(grid):
         samples = []
         for row in grid:

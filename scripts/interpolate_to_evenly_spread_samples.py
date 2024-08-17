@@ -23,14 +23,17 @@ target_file = sys.argv[2]
 start_frame = int(sys.argv[3])
 end_frame = int(sys.argv[4])
 values = sys.argv[5]
+step_size = float(sys.argv[6])
+number_of_frequencies_to_include = int(sys.argv[7])
+number_of_columns_to_include = int(sys.argv[8])
 
-smallest_x = None
-step_size = 0.5 
-minValue = 3
-samples_dict_per_frame = {}
-samples_dict_per_frame= {}
 x_border=20
 y_border=40
+minValue = 3
+
+smallest_x = None
+samples_dict_per_frame = {}
+samples_dict_per_frame= {}
 
 onlyfiles = [f for f in listdir(source_folder) if isfile(join(source_folder, f))]
 
@@ -94,7 +97,7 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
     array_of_coordinates = convert_grid_to_coordinates(grid_x, grid_y)
     two_d_array_of_values = np.array(array_of_values).reshape((int(num_of_x), int(num_of_y)))
 
-    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values}
+    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "start_frame":start_frame, "number_of_frequencies_to_include":number_of_frequencies_to_include, "number_of_columns_to_include":number_of_columns_to_include}
 
 target_file = f"{target_file}"
 f = open(target_file , "w")

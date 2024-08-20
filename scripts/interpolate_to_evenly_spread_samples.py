@@ -95,7 +95,7 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
     # Also store the samples in a 2d array, to make it possible to use fft2 on the data
     two_d_array_of_values = np.array(array_of_values).reshape((int(num_of_x), int(num_of_y)))
 
-    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "start_frame":start_frame}
+    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y}
 
 
 

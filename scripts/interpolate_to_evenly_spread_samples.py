@@ -20,12 +20,8 @@ class NumpyArrayEncoder(JSONEncoder):
 
 source_folder = sys.argv[1]
 target_file = sys.argv[2]
-start_frame = int(sys.argv[3])
-end_frame = int(sys.argv[4])
-values = sys.argv[5]
-step_size = float(sys.argv[6])
-number_of_frequencies_to_include = int(sys.argv[7])
-number_of_columns_to_include = int(sys.argv[8])
+values = sys.argv[3]
+step_size = float(sys.argv[4])
 
 x_border=20
 y_border=40
@@ -80,7 +76,7 @@ for file in onlyfiles:
         A grid has the form 
 grid_x: [[10.   10.   10.   10.   10.  ]
  [10.25 10.25 10.25 10.25 10.25]
- [10.5  10.5  10.5  10.5  10.5 ]
+ [10.5  10.5  10.5  10.5  10.5 ]10
  [10.75 10.75 10.75 10.75 10.75]
  [11.   11.   11.   11.   11.  ]]
 grid_y: [[0.   0.25 0.5  0.75 1.  ]
@@ -95,12 +91,16 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
 
     array_of_values = convert_grid_to_array_of_values(grid_samples)
     array_of_coordinates = convert_grid_to_coordinates(grid_x, grid_y)
+
+    # Also store the samples in a 2d array, to make it possible to use fft2 on the data
     two_d_array_of_values = np.array(array_of_values).reshape((int(num_of_x), int(num_of_y)))
 
-    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "start_frame":start_frame, "number_of_frequencies_to_include":number_of_frequencies_to_include, "number_of_columns_to_include":number_of_columns_to_include}
+    samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "start_frame":start_frame}
 
+
+
+# TODO: join all of the frame samples into one 3d array 
 target_file = f"{target_file}"
 f = open(target_file , "w")
 print('writing to', target_file )
 f.write(json.dumps(samples_dict_per_frame, cls=NumpyArrayEncoder))
-# TODO: should I also add stuff to make fft possible for this file?

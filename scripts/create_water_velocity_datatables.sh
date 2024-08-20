@@ -36,10 +36,9 @@ mkdir -p $tmp_folder_samples
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/x_samples.json $start_frame $end_frame x_values 
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/y_samples.json $start_frame $end_frame y_values
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/z_samples.json $start_frame $end_frame z_values
-python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height.json $start_frame $end_frame height $step_size $number_of_frequencies_to_include $number_of_rows_to_include
+python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height-per-frame.json height $step_size
+python3 reformat-height-to-3d-samples.py $tmp_folder_samples/height-per-frame.json $start_frame height $number_of_frequencies_to_include $number_of_rows_to_include
 
-
-# python3 convert_evenly_spread_samples_data_to_2d_array_of_samples.py $tmp_folder_samples/height.json $tmp_folder_samples/height_as_2d_array_samples.json  $start_frame $end_frame height 
 
 # # Convert the samples from the previous step to frequency domain
 # python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25

@@ -56,8 +56,8 @@ for file in onlyfiles:
         largest_x = data_sorted_by_x[-1][0]
         smallest_y = data_sorted_by_y[0][1]
         largest_y = data_sorted_by_y[-1][1]
-        num_of_x = (largest_x - smallest_x) / step_size
-        num_of_y = (largest_y - smallest_y) / step_size
+        num_of_x = int((largest_x - smallest_x) / step_size)
+        num_of_y = int((largest_y - smallest_y) / step_size)
 
     coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
     grid_x, grid_y = np.mgrid[smallest_x+x_border:largest_x-x_border:complex(0,num_of_x), smallest_y+y_border:largest_y-y_border:complex(0,num_of_y)]

@@ -44,13 +44,13 @@ python3 reformat_coords_and_values_to_3d_samples.py $tmp_folder_samples/height-p
 # python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
 # python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
 # python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
-# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/height.json $tmp_folder_samples/height_frequencies.json 25 100
+python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples.json $tmp_folder_samples/height_frequencies.json 25 100
 #
 # # Convert the frequency domain files to UE4 datatable format
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder/velocity_y_frequencies_struct_metadata.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder/velocity_z_frequencies_struct_metadata.json
-# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
 #
 # # TODO: Rename this file since it creates datatable for both velocities and height
 #

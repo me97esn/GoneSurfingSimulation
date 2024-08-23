@@ -37,20 +37,25 @@ done
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/y_samples.json $start_frame $end_frame y_values
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/z_samples.json $start_frame $end_frame z_values
 python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height-per-frame.json height $step_size
+python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height-per-frame-example.json height 50
+
 python3 reformat_coords_and_values_to_3d_samples.py $tmp_folder_samples/height-per-frame.json $tmp_folder_samples/height_3d_samples.json $start_frame $number_of_frequencies_to_include $number_of_rows_to_include
+python3 reformat_coords_and_values_to_3d_samples.py $tmp_folder_samples/height-per-frame-example.json $tmp_folder_samples/height_3d_samples-example.json $start_frame $number_of_frequencies_to_include $number_of_rows_to_include
 
 
 # # Convert the samples from the previous step to frequency domain
-# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
-# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
-# python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
-python3 convert_waveheight_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples.json $tmp_folder_samples/height_frequencies.json 25 100
+# python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
+# python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
+# python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
+python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples.json $tmp_folder_samples/height_frequencies.json 25 100
+python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples-example.json $tmp_folder_samples/height_frequencies-example.json 5 5
 #
 # # Convert the frequency domain files to UE4 datatable format
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder/velocity_y_frequencies_struct_metadata.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder/velocity_z_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies-example.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-example.json $folder/height_frequencies_struct_metadata-example.json
 #
 # # TODO: Rename this file since it creates datatable for both velocities and height
 #

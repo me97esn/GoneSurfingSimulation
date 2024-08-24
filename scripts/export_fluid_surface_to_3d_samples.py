@@ -10,7 +10,7 @@ output_directory = "/home/emil/workspace/GoneSurfingScripts"
 output_filename = "wave_samples.json"
 output_filepath = os.path.join(output_directory, output_filename)
 file = open(output_filepath, "w")
-samples = {"step_size":step, "samples":[], "start_frame":start_frame, "end_frame":end_frame, "start_trace_x":-60, "start_trace_y":-200, "x_length":160, "y_length":350}
+samples = {"step_size":step, "samples":[], "start_frame":start_frame, "end_frame":end_frame, "start_trace_x":-60, "start_trace_y":-200, "x_length":160, "y_length":350, "coordinates":[]}
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
@@ -24,6 +24,7 @@ for frame in range(start_frame, end_frame+1):
             ray_direction.normalize()
             hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
             sample = location.z
+            coordinates.append([location.x, location.y])
             row.append(sample)
         frame_samples.append(row)
     samples["samples"].append(frame_samples)

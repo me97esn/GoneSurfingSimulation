@@ -14,8 +14,10 @@ samples = {"step_size":step, "samples":[], "start_frame":start_frame, "end_frame
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)
     frame_samples = []
+    frame_coordinates = []
     for x in range(int(samples["x_length"]/step)):
         row = []
+        coordinates_row = []
         for y in range(int(samples["y_length"]/step)):
             ray_begin = Vector((samples["start_trace_x"]+step * x, samples["start_trace_y"]+step*y, 100))
             ray_end = Vector((samples["start_trace_x"]+step*x, samples["start_trace_y"]+step*y, -100))
@@ -24,10 +26,12 @@ for frame in range(start_frame, end_frame+1):
             ray_direction.normalize()
             hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
             sample = location.z
-            coordinates.append([location.x, location.y])
             row.append(sample)
+            coordinates_row.append([location.x, location.y])
         frame_samples.append(row)
+        frame_coordinates.append(coordinates_row)
     samples["samples"].append(frame_samples)
+    samples["coordinates"].append(frame_coordinates)
 
 file.write(json.dumps(samples))
 file.close()

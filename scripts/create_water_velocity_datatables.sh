@@ -47,9 +47,12 @@ python3 reformat_coords_and_values_to_3d_samples.py $tmp_folder_samples/height-p
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/x_samples.json $tmp_folder_samples/x_frequencies.json 25 25
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/y_samples.json $tmp_folder_samples/y_frequencies.json 25 25
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/z_samples.json $tmp_folder_samples/z_frequencies.json 25 25
-python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples.json $tmp_folder_samples/height_frequencies.json 25 100
-python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples-example.json $tmp_folder_samples/height_frequencies-example.json 5 5
-#
+python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples.json $tmp_folder_samples/height_jittery_frequencies.json 
+python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/height_3d_samples-example.json $tmp_folder_samples/height_frequencies-example.json 
+
+# I am creating data files for wave height in two ways: one with jittery waves and one with stable waves. The jittery should only be used to help in placing the water velocities, while the stable should be used for the actual wave height. The axis are different in these two files.
+python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_folder_samples/height_frequencies_stable.json 
+
 # # Convert the frequency domain files to UE4 datatable format
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/y_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_y_frequencies_struct.json $folder/velocity_y_frequencies_struct_metadata.json

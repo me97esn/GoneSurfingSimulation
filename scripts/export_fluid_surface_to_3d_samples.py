@@ -5,8 +5,9 @@ start_frame = 752
 # end_frame = 1325
 end_frame = 754
 scn = bpy.context.scene
-step = 5 
-output_directory = "/home/emil/workspace/GoneSurfingScripts"
+step = 50
+# output_directory = "/home/emil/workspace/GoneSurfingScripts"
+output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "wave_samples.json"
 output_filename_normals_x = "wave_normals_x.json"
 output_filename_normals_y = "wave_normals_y.json"
@@ -57,11 +58,8 @@ for frame in range(start_frame, end_frame+1):
         frame_normals_x.append(normals_row_x)
         frame_normals_y.append(normals_row_y)
         frame_normals_z.append(normals_row_z)
-
-
     for d in [normals_x, normals_y, normals_z, samples]:
         d["coordinates"].append(frame_coordinates)
-
     samples["samples"].append(frame_samples)
     normals_x["samples"].append(frame_normals_x)
     normals_y["samples"].append(frame_normals_y)

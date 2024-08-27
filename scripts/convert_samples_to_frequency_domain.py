@@ -42,6 +42,7 @@ f = open(filename, "r")
 
 }
 """
+# Where normals may or may not be present
 # Note that no coordinates is in the data, this is because samples are evenly spread with step_size from start_trace_x and start_trace_y
 
 

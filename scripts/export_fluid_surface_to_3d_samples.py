@@ -40,7 +40,7 @@ for frame in range(start_frame, end_frame+1):
             sample = location.z
             row.append(sample)
             coordinates_row.append([location.x, location.y])
-            normals_row.append(normals)
+            normals_row.append([normals.x, normals.y, normals.z])
         frame_samples.append(row)
         frame_coordinates.append(coordinates_row)
         frame_normals.append(normals_row)

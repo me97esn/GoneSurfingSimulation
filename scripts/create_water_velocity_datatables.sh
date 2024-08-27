@@ -5,7 +5,7 @@ end_frame=760
 folder=/hdd/gone_surfing_exports/medium_wave_left
 tmp_folder=/hdd/gone_surfing_exports/medium_wave_left/tmp
 tmp_folder_samples=/hdd/gone_surfing_exports/medium_wave_left/tmp_samples
-step_size=1
+step_size=5
 number_of_frequencies_to_include=100
 number_of_rows_to_include=100
 
@@ -59,6 +59,8 @@ python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_fo
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_z_frequencies_struct.json $folder/velocity_z_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies-example.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-example.json $folder/height_frequencies_struct_metadata-example.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies_stable.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-stable.json $folder/height_frequencies_struct_metadata-example.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_jittery_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-jittery.json $folder/height_frequencies_struct_metadata-example.json
 #
 # # TODO: Rename this file since it creates datatable for both velocities and height
 #

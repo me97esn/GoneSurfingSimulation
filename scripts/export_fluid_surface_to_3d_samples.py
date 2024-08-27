@@ -5,27 +5,29 @@ start_frame = 752
 # end_frame = 1325
 end_frame = 754
 scn = bpy.context.scene
-step = 50
+step = 5
 # output_directory = "/home/emil/workspace/GoneSurfingScripts"
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "wave_samples.json"
 output_filename_normals_x = "wave_normals_x.json"
 output_filename_normals_y = "wave_normals_y.json"
 output_filename_normals_z = "wave_normals_z.json"
-samples = {
-    "step_size":step, 
-    "samples":[], 
-    "start_frame":start_frame, 
-    "end_frame":end_frame, 
-    "start_trace_x":-60, 
-    "start_trace_y":-200, 
-    "x_length":160, 
-    "y_length":350, 
-    "coordinates":[]}
-# Create copies of the samples, for storing normals in the same format as the samples
-normals_x = samples.copy()
-normals_y = samples.copy()
-normals_z = samples.copy()
+def samples_skeleton():
+    return {
+        "step_size":step, 
+        "samples":[], 
+        "start_frame":start_frame, 
+        "end_frame":end_frame, 
+        "start_trace_x":-60, 
+        "start_trace_y":-200, 
+        "x_length":160, 
+        "y_length":350, 
+        "coordinates":[]}
+
+samples = samples_skeleton()
+normals_x = samples_skeleton()
+normals_y = samples_skeleton()
+normals_z = samples_skeleton()
 
 for frame in range(start_frame, end_frame+1):
     scn.frame_set(frame)

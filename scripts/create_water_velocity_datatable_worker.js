@@ -15,9 +15,9 @@ const result = {
   x_coordinates: [],
   y_coordinates: [],
   z_coordinates: [],
-  x_values: [],
-  y_values: [],
-  z_values: [],
+  dx: [],
+  dy: [],
+  dz: [],
   height: [],
 };
 const file = fs.readFileSync(path.join(bakefiles_folder, fileName), null);
@@ -68,9 +68,9 @@ for (let i = 0; i < numberOfVertices; i++) {
   result.z_coordinates.push(z);
 
   // velocities
-  result.x_values.push(blur_x);
-  result.y_values.push(blur_y);
-  result.z_values.push(blur_z);
+  result.dx.push(blur_x);
+  result.dy.push(blur_y);
+  result.dz.push(blur_z);
 
   // Wave height
   result.height.push(z);
@@ -82,26 +82,6 @@ for (let i = 0; i < numberOfVertices; i++) {
     dy: blur_y,
     dz: blur_z,
   });
-}
-
-// read triangels to calculate normals
-offset += bytesPerNumber;
-const numberOfTriangles = file.readUInt32LE(offset);
-for (let i = 0; i < numberOfTriangles; i++) {
-  offset += bytesPerNumber;
-  const a = file.readUInt32LE(offset);
-  offset += bytesPerNumber;
-  const b = file.readUInt32LE(offset);
-  offset += bytesPerNumber;
-  const c = file.readUInt32LE(offset);
-  const vertex_a = vertices[a];
-  const vertex_b = vertices[b];
-  const vertex_c = vertices[c];
-  // TODO: calculate the normal and store it in the result
-  //console.log("a,b,c", a, b, c);
-  //console.log("vertex_a", vertex_a);
-  //console.log("vertex_b", vertex_b);
-  //console.log("vertex_c", vertex_c);
 }
 console.log("done with ", fileName);
 parentPort.postMessage({ result });

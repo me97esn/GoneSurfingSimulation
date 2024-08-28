@@ -3,26 +3,24 @@
 
 # I am creating data files for wave height in two ways: one with jittery waves and one with stable waves. The jittery should only be used to help in placing the water velocities, while the stable should be used for the actual wave height. The axis are different in these two files.
 
-start_frame=752
-# end_frame=1325
-end_frame=760
 folder=/hdd/gone_surfing_exports/medium_wave_left
 tmp_folder=/hdd/gone_surfing_exports/medium_wave_left/tmp
 tmp_folder_samples=/hdd/gone_surfing_exports/medium_wave_left/tmp_samples
 step_size=5
-number_of_frequencies_to_include=100
-number_of_rows_to_include=100
 
 # tmp_folder=/tmp/medium_wave_left_water_velocities
 # tmp_folder_samples=/tmp/medium_wave_left_water_velocities_samples
 
-#######################################################
-# Here starts the handling of sample files created in blender using flip fluids bobj files
-#######################################################
 mkdir -p $folder
 mkdir -p $tmp_folder
 mkdir -p $tmp_folder_samples
 
+#######################################################
+# Here starts the handling of sample files created in blender using flip fluids bobj files
+#######################################################
+start_frame=752
+# end_frame=1325
+end_frame=760
 
 # Read the blur data files from blender/flip fluids, and convert them to human readable json
 # Split into multiple calls since nodejs runs out of memory
@@ -40,10 +38,12 @@ for (( k = $start_frame; k < end_frame+100; k+=100 )); do
   # node -max-old-space-size=32768 create_water_velocity_datatable.js $tmp_folder $local_start_frame $local_end_frame
 done
 # ## Read the files from the previous step and make sure that they are evenly spread. This also merges all of the frame files into one file
-# python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/dx.json $start_frame $end_frame dx
+# python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx.json $start_frame $end_frame dx
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/dy.json $start_frame $end_frame dy
 # # python3 convert_vertices_to_samples.py $tmp_folder $tmp_folder_samples/dz.json $start_frame $end_frame dz
-# python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height-per-frame.json height $step_size
+python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dx-per-frame.json dx $step_size
+# TODO: plot this file and make sure that it looks good
+# python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx_frequencies_.json 
 # python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/height-per-frame-example.json height 50
 #
 # python3 reformat_coords_and_values_to_3d_samples.py $tmp_folder_samples/height-per-frame.json $tmp_folder_samples/height_3d_samples.json $start_frame $number_of_frequencies_to_include $number_of_rows_to_include
@@ -62,15 +62,21 @@ done
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies_stable.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-stable.json $folder/height_frequencies_struct_metadata-example.json
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_jittery_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_struct-jittery.json $folder/height_frequencies_struct_metadata-example.json
 
+exit 1
 #######################################################
 # Here starts the handling of sample files created in blender using ray trace
 #######################################################
 
 # Convert the files created using ray trace in blender
 python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_folder_samples/height_frequencies_stable.json 
-node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies_stable.json /hdd/gone_surfing_exports/medium_wave_left/height_frequencies_stable_struct.json $folder/height_frequencies_struct_stable_metadata.json
+python3 convert_samples_to_frequency_domain.py $folder/wave_normals_x.json $tmp_folder_samples/wave_normals_x_frequencies.json 
+python3 convert_samples_to_frequency_domain.py $folder/wave_normals_y.json $tmp_folder_samples/wave_normals_y_frequencies.json
+python3 convert_samples_to_frequency_domain.py $folder/wave_normals_z.json $tmp_folder_samples/wave_normals_z_frequencies.json
 
-# TODO: Also convert the normals files to frequency domain!
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies_stable.json $folder/height_frequencies_stable_struct.json $folder/height_frequencies_struct_stable_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_x_frequencies.json $folder/wave_normals_x_frequencies_struct.json $folder/wave_normals_x_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_y_frequencies.json $folder/wave_normals_y_frequencies_struct.json $folder/wave_normals_y_frequencies_struct_metadata.json
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_z_frequencies.json $folder/wave_normals_z_frequencies_struct.json $folder/wave_normals_z_frequencies_struct_metadata.json
 
 # # Convert the frequency domain files to UE4 datatable format
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/x_frequencies.json /hdd/gone_surfing_exports/medium_wave_left/velocity_x_frequencies_struct.json $folder/velocity_x_frequencies_struct_metadata.json

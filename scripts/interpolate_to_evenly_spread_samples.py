@@ -48,21 +48,22 @@ for file in onlyfiles:
     print(f"Processing {file}")
     f = open(f"{source_folder}/{file}")
     data = json.load(f)
-    data_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
-    data_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
+    coordinates_sorted_by_x = sorted(data['coordinates'], key=lambda d: d[0])
+    coordinates_sorted_by_y = sorted(data['coordinates'], key=lambda d: d[1])
 
     if smallest_x is None:
-        smallest_x = data_sorted_by_x[0][0]
-        largest_x = data_sorted_by_x[-1][0]
-        smallest_y = data_sorted_by_y[0][1]
-        largest_y = data_sorted_by_y[-1][1]
+        smallest_x = coordinates_sorted_by_x[0][0]
+        largest_x = coordinates_sorted_by_x[-1][0]
+        smallest_y = coordinates_sorted_by_y[0][1]
+        largest_y = coordinates_sorted_by_y[-1][1]
         num_of_x = int((largest_x - smallest_x) / step_size)
         num_of_y = int((largest_y - smallest_y) / step_size)
+        print(f"smallest_x: {smallest_x}, largest_x: {largest_x}, smallest_y: {smallest_y}, largest_y: {largest_y}, num_of_x: {num_of_x}, num_of_y: {num_of_y}")
 
-    coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
+    # coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
     grid_x, grid_y = np.mgrid[smallest_x+x_border:largest_x-x_border:complex(0,num_of_x), smallest_y+y_border:largest_y-y_border:complex(0,num_of_y)]
 
-    grid_samples = griddata(coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold, (grid_x, grid_y), method='linear', fill_value=0)
+    grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='linear', fill_value=0)
 
     def convert_grid_to_array_of_values(grid):
         samples = []

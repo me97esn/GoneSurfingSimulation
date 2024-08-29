@@ -58,9 +58,7 @@ for file in onlyfiles:
         largest_y = coordinates_sorted_by_y[-1][1]
         num_of_x = int((largest_x - smallest_x) / step_size)
         num_of_y = int((largest_y - smallest_y) / step_size)
-        print(f"smallest_x: {smallest_x}, largest_x: {largest_x}, smallest_y: {smallest_y}, largest_y: {largest_y}, num_of_x: {num_of_x}, num_of_y: {num_of_y}")
 
-    # coordinatesWithValueAboveMinTreshold, valuesAboveMinThreshold = filterSamplesAboveMinValue(data['coordinates'], data[values], minValue=minValue)
     grid_x, grid_y = np.mgrid[smallest_x+x_border:largest_x-x_border:complex(0,num_of_x), smallest_y+y_border:largest_y-y_border:complex(0,num_of_y)]
 
     grid_samples = griddata(data['coordinates'], data[values], (grid_x, grid_y), method='linear', fill_value=0)
@@ -98,10 +96,13 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
 
     samples_dict_per_frame[int(file.replace('.json', ''))] = {"samples":array_of_values, "coordinates":array_of_coordinates, "samples_2d":two_d_array_of_values, "start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y}
 
+frames_sorted = sorted(samples_dict_per_frame.keys(), key=lambda d: int(d))
+
+result = {"start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "samples":[ samples_dict_per_frame[frame]["samples_2d"] for frame in frames_sorted]}
 
 
 # TODO: join all of the frame samples into one 3d array 
 target_file = f"{target_file}"
 f = open(target_file , "w")
 print('writing to', target_file )
-f.write(json.dumps(samples_dict_per_frame, cls=NumpyArrayEncoder))
+f.write(json.dumps(result, cls=NumpyArrayEncoder))

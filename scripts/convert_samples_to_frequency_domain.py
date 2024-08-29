@@ -21,7 +21,6 @@ f = open(filename, "r")
     "start_trace_y": 0,
     "start_trace_x": 0,
     "step_size": 1,
-    "start_frame": 0,
     "samples": [ # frame
         [ # row
             [0.1, 0.2, 0.3],# column
@@ -56,7 +55,6 @@ frequencies_result = {
     "start_trace_y": samples_data["start_trace_y"],
     "start_trace_x": samples_data["start_trace_x"],
     "step_size": samples_data["step_size"],
-    "start_frame": samples_data["start_frame"],
     "number_of_frequencies_to_include": -1, # deprecated, should remove from UE Struct
     "number_of_rows_to_include": -1, # deprecated, should remove from UE Struct
     "len_x": len(samples[0]),

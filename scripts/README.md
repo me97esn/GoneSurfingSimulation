@@ -54,8 +54,9 @@ For the water velocities, bjson files are read.
 ## Water height
 
 1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
-1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Then copy the content.
+1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
+   Then copy the content.
 1. In blender, click on Scripting and paste the content from the line above
 1. Press enter twice to start the export
-1. After the export is finished: run the script ./convert_waveheight_samples_to_frequency_domain.sh to export another json file, with fourier transformed data
-1. The created json file can be run in python. But to convert it into a format that UE4 can read, run the script ./convert_frequencies_json_to_ue4_datatable_format.sh
+1. After the export is finished: edit the start and end frame and run the script ./convert_waveheight_samples_to_frequency_domain.sh to export json files, with fourier transformed data
+1. These files can then be imported into UE4 as WaveHeight_Struct

@@ -98,7 +98,7 @@ grid_y: [[0.   0.25 0.5  0.75 1.  ]
 
 frames_sorted = sorted(samples_dict_per_frame.keys(), key=lambda d: int(d))
 
-result = {"start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y, "samples":[ samples_dict_per_frame[frame]["samples_2d"] for frame in frames_sorted]}
+result = {"start_trace_x":smallest_x, "start_trace_y":smallest_y, "step_size":step_size, "len_x":num_of_x, "len_y":num_of_y,"start_frame":int(frames_sorted[0]), "samples":[ samples_dict_per_frame[frame]["samples_2d"] for frame in frames_sorted]}
 
 
 # TODO: join all of the frame samples into one 3d array 

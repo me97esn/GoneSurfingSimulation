@@ -44,8 +44,9 @@ done
 python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dx-per-frame-example.json dx 50
 python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dx-per-frame.json dx $step_size
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx-frequencies.json 
-exit 1
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dx-frequencies.json $folder/dx_frequencies_struct.json $folder/dx_frequencies_struct_metadata.json
+
+exit 1
 
 #######################################################
 # Here starts the handling of sample files created in blender using ray trace

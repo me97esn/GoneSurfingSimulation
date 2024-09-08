@@ -28,7 +28,6 @@ for frame in data:
     frames.append(frame)
 # sort the frames
 frames = sorted(frames, key=lambda d: d)
-print('frames', frames)
 
 result = []
 for frame in frames:

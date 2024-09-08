@@ -22,8 +22,6 @@ const metadata = [
   },
 ];
 
-console.log(sourceData.frequencies_per_frame);
-
 for (let frequency2darray of sourceData.frequencies_per_frame) {
   const frequencies = [];
   result.push({

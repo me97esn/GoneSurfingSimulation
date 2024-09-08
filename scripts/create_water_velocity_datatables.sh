@@ -6,7 +6,7 @@
 folder=/hdd/gone_surfing_exports/medium_wave_left
 tmp_folder=/hdd/gone_surfing_exports/medium_wave_left/tmp
 tmp_folder_samples=/hdd/gone_surfing_exports/medium_wave_left/tmp_samples
-step_size=5
+step_size=2
 
 # tmp_folder=/tmp/medium_wave_left_water_velocities
 # tmp_folder_samples=/tmp/medium_wave_left_water_velocities_samples

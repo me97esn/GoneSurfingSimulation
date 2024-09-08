@@ -6,7 +6,6 @@
 folder=/hdd/gone_surfing_exports/medium_wave_left
 tmp_folder=/hdd/gone_surfing_exports/medium_wave_left/tmp
 tmp_folder_samples=/hdd/gone_surfing_exports/medium_wave_left/tmp_samples
-step_size=2
 
 # tmp_folder=/tmp/medium_wave_left_water_velocities
 # tmp_folder_samples=/tmp/medium_wave_left_water_velocities_samples
@@ -20,7 +19,7 @@ mkdir -p $tmp_folder_samples
 #######################################################
 start_frame=752
 end_frame=1325
-# end_frame=753
+step_size=4
 
 # Read the blur data files from blender/flip fluids, and convert them to human readable json
 # Split into multiple calls since nodejs runs out of memory

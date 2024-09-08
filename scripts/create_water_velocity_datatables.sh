@@ -16,10 +16,12 @@ mkdir -p $tmp_folder_samples
 
 #######################################################
 # Here starts the handling of sample files created in blender using flip fluids bobj files
+# I can't use this for the wave height, since there are not only vertices at the surface. For fft to work,
+# there should be evenly spread samples at the surface only.
 #######################################################
 start_frame=752
 end_frame=1325
-step_size=4
+step_size=5
 
 # Read the blur data files from blender/flip fluids, and convert them to human readable json
 # Split into multiple calls since nodejs runs out of memory
@@ -51,7 +53,9 @@ node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dy-
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dz-frequencies.json $folder/dz_frequencies_struct.json $folder/dz_frequencies_struct_metadata.json
 
 #######################################################
-# Here starts the handling of sample files created in blender using ray trace
+# Here starts the handling of sample files created in blender using ray trace.
+# This is used for the wave height, since the samples are evenly spread at the surface. But there is no velocity data.
+# This is also used for the wave normals, since the normals are not available in the flip fluids data but available in the ray trace data. 
 #######################################################
 
 python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_folder_samples/height_frequencies.json 

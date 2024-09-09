@@ -42,7 +42,7 @@ for (let frequency2darray of sourceData.frequencies_per_frame) {
 }
 
 console.log(`Writing to ${resultFileUri}`);
-fs.writeFileSync(resultFileUri, JSON.stringify(result, null, 2), {
+fs.writeFileSync(resultFileUri, JSON.stringify(result), {
   encoding: "utf8",
   flag: "w",
 });

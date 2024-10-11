@@ -42,6 +42,15 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 7. In UE4, re-import the json files
 8. In UE4, re-compile the particle system
 
+## Water height
+
+1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
+1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
+   Then copy the content.
+1. In blender, click on Scripting and paste the content from the line above
+1. Press enter twice to start the export
+1. After the export is finished: The samples are converted in the same step as the velocity data below
+
 ## Water forces/velocities
 
 For the water velocities, bjson files are read.
@@ -50,13 +59,3 @@ For the water velocities, bjson files are read.
 2. Open the file ./create_water_velocity_datatables.sh. Change the numbers to match the start and end frames. These should be split up into multiple scripts, each with different frame numbers.
 3. run the script `./create_water_velocity_datatables.sh`. This creates datatables for the water velocity to be imported into UE4
 4. Import the files into UE4 as WaveVerticesLocations_Struct
-
-## Water height
-
-1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
-1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
-   Then copy the content.
-1. In blender, click on Scripting and paste the content from the line above
-1. Press enter twice to start the export
-1. After the export is finished: edit the start and end frame and run the script ./convert_waveheight_samples_to_frequency_domain.sh to export json files, with fourier transformed data
-1. These files can then be imported into UE4 as WaveHeight_Struct

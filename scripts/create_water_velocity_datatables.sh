@@ -17,7 +17,8 @@ mkdir -p $tmp_folder_samples
 #######################################################
 # Here starts the handling of sample files created in blender using flip fluids bobj files
 # I can't use this for the wave height, since there are not only vertices at the surface. For fft to work,
-# there should be evenly spread samples at the surface only.
+# there should be evenly spread samples at the surface only. 
+# But I can use this for the velocity data, since the velocity is only available at the surface in Flip Fluids.
 #######################################################
 start_frame=752
 end_frame=1325
@@ -47,13 +48,23 @@ python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/
 python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dy-per-frame.json dy $step_size
 python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dz-per-frame.json dz $step_size
 
+# z is only used for debugging and placing the velocity data in the correct position
+python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/z-per-frame.json height $step_size
+
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx-frequencies.json 
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dy-per-frame.json $tmp_folder_samples/dy-frequencies.json
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dz-per-frame.json $tmp_folder_samples/dz-frequencies.json
 
+# z is only used for debugging and placing the velocity data in the correct position
+python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/z-per-frame.json $tmp_folder_samples/z-frequencies.json
+
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dx-frequencies.json $folder/dx_frequencies_struct.json $folder/dx_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dy-frequencies.json $folder/dy_frequencies_struct.json $folder/dy_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dz-frequencies.json $folder/dz_frequencies_struct.json $folder/dz_frequencies_struct_metadata.json
+
+node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z-frequencies.json $folder/z_frequencies_for_debugging_struct.json $folder/z_frequencies_for_debugging_struct_metadata.json
+
+echo "exit prematurely"
 
 #######################################################
 # Here starts the handling of sample files created in blender using ray trace.

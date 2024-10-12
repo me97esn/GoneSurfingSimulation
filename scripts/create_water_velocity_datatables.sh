@@ -56,6 +56,8 @@ python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx-per-frame.
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dy-per-frame.json $tmp_folder_samples/dy-frequencies.json
 python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dz-per-frame.json $tmp_folder_samples/dz-frequencies.json
 
+python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dx-per-frame-example.json $tmp_folder_samples/dx-samples-example.json 
+
 python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx-samples.json 
 python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dy-per-frame.json $tmp_folder_samples/dy-samples.json
 python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dz-per-frame.json $tmp_folder_samples/dz-samples.json
@@ -67,6 +69,12 @@ node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dx-
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dy-frequencies.json $folder/dy_frequencies_struct.json $folder/dy_frequencies_struct_metadata.json
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/dz-frequencies.json $folder/dz_frequencies_struct.json $folder/dz_frequencies_struct_metadata.json
 
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dx-frequencies.json $folder/dx_frequencies_struct.json $folder/dx_frequencies_struct_metadata.json
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dy-frequencies.json $folder/dy_frequencies_struct.json $folder/dy_frequencies_struct_metadata.json
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dz-frequencies.json $folder/dz_frequencies_struct.json $folder/dz_frequencies_struct_metadata.json
+
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dx-per-frame-example.json $folder/dx_samples_example_struct.json $folder/dx_samples_example_struct_metadata.json
+
 node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z-frequencies.json $folder/z_frequencies_for_debugging_struct.json $folder/z_frequencies_for_debugging_struct_metadata.json
 
 #######################################################
@@ -74,6 +82,9 @@ node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z-f
 # This is used for the wave height, since the samples are evenly spread at the surface. But there is no velocity data.
 # This is also used for the wave normals, since the normals are not available in the flip fluids data but available in the ray trace data. 
 #######################################################
+
+echo "TODO: If I get samples to work, also use that for the following files instead of ifft"
+exit 0
 
 python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_folder_samples/height_frequencies.json 
 python3 convert_samples_to_frequency_domain.py $folder/wave_normals_x.json $tmp_folder_samples/wave_normals_x_frequencies.json 

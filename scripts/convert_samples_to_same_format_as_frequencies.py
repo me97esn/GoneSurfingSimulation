@@ -1,3 +1,6 @@
+## This script is used to convert samples to the same format as frequencies. The main differecnce is that frequencies has a list of complex numbers, while samples has a list of lists of floats.
+
+
 import numpy as np
 import json
 import os

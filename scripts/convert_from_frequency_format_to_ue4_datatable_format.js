@@ -1,5 +1,12 @@
 const fs = require("fs");
-const [, , sourceFileURL, resultFileUri, resultFileMetadataUri] = process.argv;
+const [
+  ,
+  ,
+  sourceFileURL,
+  resultFileUri,
+  resultFileMetadataUri,
+  number_of_decimals,
+] = process.argv;
 const content = fs.readFileSync(sourceFileURL, {
   encoding: "utf8",
   flag: "r",
@@ -7,7 +14,7 @@ const content = fs.readFileSync(sourceFileURL, {
 const sourceData = JSON.parse(content);
 const result = [];
 let i = 0;
-const multiplier = 1000;
+const multiplier = number_of_decimals || 1000;
 const metadata = [
   {
     Name: "Metadata",

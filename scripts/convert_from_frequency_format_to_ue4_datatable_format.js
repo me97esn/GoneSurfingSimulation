@@ -1,12 +1,6 @@
 const fs = require("fs");
-const [
-  ,
-  ,
-  sourceFileURL,
-  resultFileUri,
-  resultFileMetadataUri,
-  number_of_decimals,
-] = process.argv;
+const [, , sourceFileURL, resultFileUri, resultFileMetadataUri, _multiplier] =
+  process.argv;
 const content = fs.readFileSync(sourceFileURL, {
   encoding: "utf8",
   flag: "r",
@@ -14,7 +8,7 @@ const content = fs.readFileSync(sourceFileURL, {
 const sourceData = JSON.parse(content);
 const result = [];
 let i = 0;
-const multiplier = number_of_decimals || 1000;
+const multiplier = parseInt(_multiplier) || 1000;
 const metadata = [
   {
     Name: "Metadata",
@@ -23,7 +17,7 @@ const metadata = [
     start_trace_y: sourceData.start_trace_y,
     len_x: sourceData.len_x,
     len_y: sourceData.len_y,
-    multiplier: multiplier,
+    multiplier,
   },
 ];
 
@@ -35,8 +29,8 @@ for (let frequency2darray of sourceData.frequencies_per_frame) {
   });
   for (let row of frequency2darray) {
     const encapsulatingObj = {
-      arr: row,
-      //arr: row.map((value) => Math.round(value * multiplier)),
+      //arr: row,
+      arr: row.map((value) => Math.round(value * multiplier)),
     };
     values.push(encapsulatingObj);
   }

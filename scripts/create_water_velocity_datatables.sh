@@ -48,7 +48,7 @@ step_size=2
 # python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dy-per-frame.json dy $step_size
 # python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/dz-per-frame.json dz $step_size
 # z is only used for debugging and placing the velocity data in the correct position
-python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/z-per-frame.json height $step_size
+# python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/z-per-frame.json height $step_size
 
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx-frequencies.json 
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/dy-per-frame.json $tmp_folder_samples/dy-frequencies.json
@@ -58,7 +58,7 @@ python3 interpolate_to_evenly_spread_samples.py $tmp_folder $tmp_folder_samples/
 # python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dx-per-frame.json $tmp_folder_samples/dx-samples.json 
 # python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dy-per-frame.json $tmp_folder_samples/dy-samples.json
 # python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/dz-per-frame.json $tmp_folder_samples/dz-samples.json
-python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/z-per-frame.json $tmp_folder_samples/z-samples.json
+# python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/z-per-frame.json $tmp_folder_samples/z-samples.json
 
 # z is only used for debugging and placing the velocity data in the correct position
 # python3 convert_samples_to_frequency_domain.py $tmp_folder_samples/z-per-frame.json $tmp_folder_samples/z-frequencies.json
@@ -75,7 +75,7 @@ python3 convert_samples_to_same_format_as_frequencies.py $tmp_folder_samples/z-p
 # node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dx-samples.json $folder/dx_samples_struct.json $folder/dx_samples_struct_metadata.json 10
 # node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dy-samples.json $folder/dy_samples_struct.json $folder/dy_samples_struct_metadata.json 10
 # node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/dz-samples.json $folder/dz_samples_struct.json $folder/dz_samples_struct_metadata.json 10
-node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/z-samples.json $folder/z_samples_struct_for_debugging.json $folder/z_samples_struct_metadata_for_debugging.json 10
+# node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/z-samples.json $folder/z_samples_struct_for_debugging.json $folder/z_samples_struct_metadata_for_debugging.json 10
 
 
 # node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/z-frequencies.json $folder/z_frequencies_for_debugging_struct.json $folder/z_frequencies_for_debugging_struct_metadata.json
@@ -87,26 +87,18 @@ node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_sample
 #######################################################
 
 
-# python3 convert_samples_to_frequency_domain.py $folder/wave_samples.json $tmp_folder_samples/height_frequencies.json 
-# python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_samples.json $tmp_folder_samples/height_samples.json
+python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_samples.json $tmp_folder_samples/height_samples.json
 
-# python3 convert_samples_to_frequency_domain.py $folder/wave_normals_x.json $tmp_folder_samples/wave_normals_x_frequencies.json 
-# python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_x.json $tmp_folder_samples/wave_normals_x_samples.json
+python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_x.json $tmp_folder_samples/wave_normals_x_samples.json
 
-# python3 convert_samples_to_frequency_domain.py $folder/wave_normals_y.json $tmp_folder_samples/wave_normals_y_frequencies.json
-# python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_y.json $tmp_folder_samples/wave_normals_y_samples.json
+python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_y.json $tmp_folder_samples/wave_normals_y_samples.json
 
-# python3 convert_samples_to_frequency_domain.py $folder/wave_normals_z.json $tmp_folder_samples/wave_normals_z_frequencies.json
-# python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_z.json $tmp_folder_samples/wave_normals_z_samples.json
+python3 convert_samples_to_same_format_as_frequencies.py $folder/wave_normals_z.json $tmp_folder_samples/wave_normals_z_samples.json
 
-# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/height_frequencies.json $folder/height_frequencies_struct.json $folder/height_frequencies_struct_metadata.json
-# node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/height_samples.json $folder/height_samples_struct.json $folder/height_samples_struct_metadata.json 100
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/height_samples.json $folder/height_samples_struct.json $folder/height_samples_struct_metadata.json 100
 
-# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_x_frequencies.json $folder/wave_normals_x_frequencies_struct.json $folder/wave_normals_x_frequencies_struct_metadata.json
-# node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_x_samples.json $folder/wave_normals_x_samples_struct.json $folder/wave_normals_x_samples_struct_metadata.json 10
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_x_samples.json $folder/wave_normals_x_samples_struct.json $folder/wave_normals_x_samples_struct_metadata.json 10
 
-# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_y_frequencies.json $folder/wave_normals_y_frequencies_struct.json $folder/wave_normals_y_frequencies_struct_metadata.json
-# node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_y_samples.json $folder/wave_normals_y_samples_struct.json $folder/wave_normals_y_samples_struct_metadata.json 10
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_y_samples.json $folder/wave_normals_y_samples_struct.json $folder/wave_normals_y_samples_struct_metadata.json 10
 
-# node convert_frequencies_json_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_z_frequencies.json $folder/wave_normals_z_frequencies_struct.json $folder/wave_normals_z_frequencies_struct_metadata.json
-# node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_z_samples.json $folder/wave_normals_z_samples_struct.json $folder/wave_normals_z_samples_struct_metadata.json 10
+node convert_from_frequency_format_to_ue4_datatable_format.js $tmp_folder_samples/wave_normals_z_samples.json $folder/wave_normals_z_samples_struct.json $folder/wave_normals_z_samples_struct_metadata.json 10

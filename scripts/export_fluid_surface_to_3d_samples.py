@@ -19,9 +19,9 @@ def samples_skeleton():
         "start_frame":start_frame, 
         "end_frame":end_frame, 
         "start_trace_x":-60, 
-        "start_trace_y":-200, 
+        "start_trace_y":-280, 
         "x_length":160, 
-        "y_length":350, 
+        "y_length":450, 
         "coordinates":[]}
 
 samples = samples_skeleton()

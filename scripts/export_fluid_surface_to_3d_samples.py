@@ -49,6 +49,7 @@ for frame in range(start_frame, end_frame+1):
             ray_direction = ray_end - ray_begin
             ray_direction.normalize()
             hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
+            normals.normalize()
             sample = location.z
             row.append(sample)
             coordinates_row.append([location.x, location.y])

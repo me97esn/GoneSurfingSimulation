@@ -3,10 +3,16 @@
 ## Overview
 This exports the samples of the ocean surface in a format that can be imported into Unreal.
 ## Objective
+This should create a script that can be run in blender, that exports all of the samples. 
 ## Requirements
 
 ### Functional Requirements
-1. **FR-1**: 
+1. **FR-1**: The implementation shall create a script in the same folder as export_fluid_surface_to_3d_samples.py
+2. **FR-2**: The created script should be similar to export_fluid_surface_to_3d_samples.py, but write the data in another format to another file.
+3. **FR-3**: The created script should write json to a file with the format as in the WavePointsData_Example.json file.
+4. **FR-4**: The keys for each row should be in the format "Frame_752" where the number is the frame number.
+5. **FR-5**: The result json file should be named ocean-points-data.json
+6. **FR-6**: The script file should be a python file
 
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable
@@ -18,7 +24,7 @@ This exports the samples of the ocean surface in a format that can be imported i
 ## Implementation Details
 
 ## Notes for AI Agent
-- Implement as a node js script in javascript
+- Implement as a python script
 
 ## Status
 - [] Specification written

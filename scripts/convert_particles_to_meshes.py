@@ -70,8 +70,9 @@ def main():
     # The active object should be the one with the particle system.
     ps_obj = bpy.context.object
     ps_obj_evaluated = depsgraph.objects[ ps_obj.name ]
+    print("ps_obj_evaluated 2: ", ps_obj_evaluated)
     obj = [obj for obj in bpy.context.selected_objects if obj != ps_obj][0]
-    ps = ps_obj_evaluated.particle_systems[0]  # Assume only 1 particle system is present.
+    ps = ps_obj_evaluated[1]  # Assume only 1 particle system is present.
     start_frame = bpy.context.scene.frame_start
     end_frame = bpy.context.scene.frame_end
     obj_list = create_objects_for_particles(ps, obj)

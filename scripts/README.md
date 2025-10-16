@@ -4,9 +4,9 @@
 
 run the script `./open_simulation.sh` to open blender with the simulation. This is needed for the generation of the water forces (blur files).
 
-## Export the wave animation
+## Export the wave animation (Alternative: Alembic, for use in desktop games)
 
-1. From blender, open the file breaking_waves_beach_break_2_water_display.blend. Add or edit modifier:Remesh with settings, voxelsize: 0.5, adaptivity: 0.
+. From blender, open the file breaking_waves_beach_break_2_water_display.blend. Add or edit modifier:Remesh with settings, voxelsize: 0.5, adaptivity: 0.
 2. Set the start frame to 1 (Important! Even if the waves should start at a later frame, the animation has to be exported from the first frame, otherwise it will be corrupted) and the end frame to prefered end frame (currently 868). NOTE: Last time I wrote this, I wrote 0. But this doesn't work and I beleive this is incorrect. frame 0 gave an error when trying to import into UE4. But this could be because both the simulation and the animation starts at frame 1. Perhaps the important thing is to start on the first simulation&animation frame?
 3. Select the water and export as alembic: Selected objects only, scale: 1.000,
    uncheck: Vertex colors, Face sets, Use subdivision Schema, Apply subsurf, Curves as Mesh, Triangulate,;Export hair, Export particles, Flatten hierarchy
@@ -16,6 +16,16 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 5. Go to frame 1, and set the simulation and animation to start on frame 1
 6. To choose resolution, choose the Water surface, and change the Flip fluids setting to display preview in the render and viewport.
 7. To import this animation into ue4: use geometry cache which imports the entire animation. I have often had problems with normals being on the inside. I have not been able to solve that satisfactory, but the way I handle it is by setting the water material in UE4 to be double sided.
+
+## Export the wave animation (Alternative json file, for use in mobile games)
+1. From blender, open the file breaking_waves_beach_break_2_water_display.blend. 
+2. Open a Text Editor view in Blender.
+3. Press Alt + O, or go to Text>Open Text Block and open the export_ocean_points.py file
+4. adjust the start frame and end frame. Roughly 300 frames works, but exporting too much crashes blender.
+5. Adjust the resulting file name. If the export is split into multiple files, a new file name has to be choosen.
+6. Then simply press Run script :D
+7. The json file(s) can then be imported into Unreal using the WavePointsDataStruct.
+
 
 ## Import the alembic animation into UE4
 

@@ -21,7 +21,8 @@ for frame in range(start_frame, end_frame + 1):
     frame_data = {
         "Name": f"Frame_{frame}",
         "Positions": [],
-        "Normals": []
+        "Normals": [],
+        "NormalCosines": []  # Cosine of angle with Z-axis
     }
     for x in range(int(160 / step)):
         for y in range(int(450 / step)):
@@ -34,6 +35,12 @@ for frame in range(start_frame, end_frame + 1):
             ray_direction.normalize()
             hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
             normals.normalize()
+
+            # Calculate cosine of angle between normal and Z-axis (0, 0, 1)
+            # This gives you how "upward" the surface is (1.0 = flat horizontal, 0.0 = vertical)
+            z_axis = Vector((0, 0, 1))
+            cos_z = normals.dot(z_axis)
+
             frame_data["Positions"].append({
                 "X": float(location.x),
                 "Y": float(location.y),
@@ -44,6 +51,7 @@ for frame in range(start_frame, end_frame + 1):
                 "Y": float(normals.y),
                 "Z": float(normals.z)
             })
+            frame_data["NormalCosines"].append(float(cos_z))
     frames_data.append(frame_data)
 output_filepath=os.path.join(output_directory,output_filename)
 with open(output_filepath, "w") as file:

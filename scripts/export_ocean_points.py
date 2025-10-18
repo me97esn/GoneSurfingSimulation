@@ -1,6 +1,7 @@
 import os
 import json
 import bpy
+import math
 from mathutils import Vector
 
 target_object = bpy.data.objects['fluid_surface']
@@ -8,7 +9,7 @@ start_frame = 752
 end_frame = 1325
 # end_frame = 754
 scn = bpy.context.scene
-step = 1
+step = 4 # Distance between traced points
 # output_directory = "/home/emil/workspace/GoneSurfingScripts"
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
@@ -17,12 +18,12 @@ output_filename = "ocean-points-data.json"
 frames_data = []
 
 for frame in range(start_frame, end_frame + 1):
-   scn.frame_set(frame)
+    scn.frame_set(frame)
     frame_data = {
         "Name": f"Frame_{frame}",
         "Positions": [],
         "Normals": [],
-        "NormalCosines": []  # Cosine of angle with Z-axis
+        "Scales": []
     }
     for x in range(int(160 / step)):
         for y in range(int(450 / step)):
@@ -46,13 +47,37 @@ for frame in range(start_frame, end_frame + 1):
                 "Y": float(location.y),
                 "Z": float(location.z)
             })
+
+            # Convert normal vector to rotation angles in degrees
+            # X = Roll (rotation around X-axis)
+            # Y = Pitch (rotation around Y-axis)
+            # Z = Yaw (rotation around Z-axis)
+
+            # Yaw (Z): rotation around Z-axis (horizontal angle)
+            yaw = math.atan2(normals.y, normals.x) * 180.0 / math.pi
+
+            # Pitch (Y): rotation around Y-axis (up/down tilt)
+            horizontal_length = math.sqrt(normals.x**2 + normals.y**2)
+            pitch = math.atan2(normals.z, horizontal_length) * 180.0 / math.pi
+
+            # Roll (X): For a surface normal, roll is typically 0
+            roll = 0.0
+
             frame_data["Normals"].append({
-                "X": float(normals.x),
-                "Y": float(normals.y),
-                "Z": float(normals.z)
+                "X": float(roll),   # Roll
+                "Y": float(pitch),  # Pitch
+                "Z": float(yaw)     # Yaw
             })
-            frame_data["NormalCosines"].append(float(cos_z))
+            scale = 1
+            if(cos_z != 0):
+                scale = 1/float(cos_z)
+            else:
+                scale = 10000
+            frame_data["Scales"].append(scale)
+
     frames_data.append(frame_data)
+    print("Processed frame:", frame)
 output_filepath=os.path.join(output_directory,output_filename)
 with open(output_filepath, "w") as file:
     json.dump(frames_data, file, indent=2)
+print("Export completed successfully.")

@@ -14,7 +14,6 @@ This should create a script that can be run in blender, that exports all of the 
 5. **FR-5**: The result json file should be named ocean-points-data.json
 6. **FR-6**: The script file should be a python file
 7. **FR-7**: Make sure that the python file is correctly indented and compiles
-8. **FR-8**: The script should add another array of floats, for scale. The scale should be calculated using the direction of the normal for this sample. 
 
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable

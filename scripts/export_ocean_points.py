@@ -22,7 +22,7 @@ for frame in range(start_frame, end_frame + 1):
         "Name": f"Frame_{frame}",
         "Positions": [],
         "Normals": [],
-        "NormalCosines": []  # Cosine of angle with Z-axis
+        "Scales": []
     }
     for x in range(int(160 / step)):
         for y in range(int(450 / step)):
@@ -51,7 +51,13 @@ for frame in range(start_frame, end_frame + 1):
                 "Y": float(normals.y),
                 "Z": float(normals.z)
             })
-            frame_data["NormalCosines"].append(float(cos_z))
+
+            scale = 1
+            if(cos_z != 0):
+                scale = 1/float(cos_z)
+            else:
+                scale = 10000
+            frame_data["Scales"].append(scale)
     frames_data.append(frame_data)
     print(f"Processed frame {frame}")
 output_filepath=os.path.join(output_directory,output_filename)

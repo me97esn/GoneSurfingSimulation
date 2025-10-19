@@ -17,7 +17,7 @@ output_filename = "ocean-points-data.json"
 frames_data = []
 
 for frame in range(start_frame, end_frame + 1):
-   scn.frame_set(frame)
+    scn.frame_set(frame)
     frame_data = {
         "Name": f"Frame_{frame}",
         "Positions": [],

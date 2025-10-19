@@ -53,6 +53,8 @@ for frame in range(start_frame, end_frame + 1):
             })
             frame_data["NormalCosines"].append(float(cos_z))
     frames_data.append(frame_data)
+    print(f"Processed frame {frame}")
 output_filepath=os.path.join(output_directory,output_filename)
 with open(output_filepath, "w") as file:
     json.dump(frames_data, file, indent=2)
+print("Export completed!")

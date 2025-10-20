@@ -24,8 +24,10 @@ for frame in range(start_frame, end_frame + 1):
         "Normals": [],
         "Scales": []
     }
+    i = 0
     for x in range(int(160 / step)):
         for y in range(int(450 / step)):
+            i+=1
             start_trace_x = -60
             start_trace_y = -280
             ray_begin = Vector((start_trace_x + step * x, start_trace_y + step * y, 100))
@@ -51,6 +53,20 @@ for frame in range(start_frame, end_frame + 1):
                 "Y": float(normals.y),
                 "Z": float(normals.z)
             })
+
+            # For testing purposes, set normals to (1,0,1) every 5th x step. To see if Unreal can display this properly.
+            # if(i%5==0):
+            #     frame_data["Normals"].append({
+            #         "X": float(1.0),
+            #         "Y": float(0.0),
+            #         "Z": float(1.0)
+            #     })
+            # else:
+            #     frame_data["Normals"].append({
+            #         "X": float(0.0),
+            #         "Y": float(0.0),
+            #         "Z": float(1.0)
+            #     })
 
             scale = 1
             if(cos_z != 0):

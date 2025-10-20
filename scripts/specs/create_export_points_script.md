@@ -14,7 +14,9 @@ This should create a script that can be run in blender, that exports all of the 
 5. **FR-5**: The result json file should be named ocean-points-data.json
 6. **FR-6**: The script file should be a python file
 7. **FR-7**: Make sure that the python file is correctly indented and compiles
-8. **FR-8**: The script should add another array of floats, for scale. The scale should be calculated using the direction of the normal for this sample. 
+8. **FR-8**: The normal exported should not be normal value returned from the ray_cast function. The normal should instead be calculated. The way to calculate the normals is that each ray_cast should do another two raycast, one halfway to the next ray_cast location in y direction, and one halfway from the previous ray_cast location in the same direction. Then imagine a horisontal plane is placed so that it touches both of the two extra ray_cast hits. The plane should only be rotated around one axis.
+The normal for this plane should be used as normal for this sample point.
+
 
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable

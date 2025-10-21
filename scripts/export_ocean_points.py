@@ -16,7 +16,7 @@ output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
 
 # Height difference threshold for skipping samples (FR-9)
-max_height_difference = 0.2  # Configurable threshold in units
+max_height_difference = 0.12  # Configurable threshold in units
 
 # Array to store all frames
 frames_data = []

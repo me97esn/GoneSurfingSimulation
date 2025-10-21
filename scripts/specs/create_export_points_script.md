@@ -17,7 +17,7 @@ This should create a script that can be run in blender, that exports all of the 
 8. **FR-8**: The script should add another array of floats, for scale. The scale should be calculated using the direction of the normal for this sample. 
 9. **FR-9**: If the height difference between this raycast and the previous raycast in the X Axis is above a configurable value, this raycast should be skipped. Neither its position, normal nor scale should be stored. Same thing if the height difference compared to the next raycast in the same axis, the results of this raycast should be skipped.
 10. **FR-10**: At the end of the script: print how many samples have been written, how many was skipped and the percentage of skipped raycasts.
-
+11. **FR-11**: I have added a mesh named 'High_resolution_boundary' to the blender file. Only samples within the boundaries of this mesh should be handled in the **FR-9** requirement.
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable
 2. **NFR-2**: The code shall follow project coding standards

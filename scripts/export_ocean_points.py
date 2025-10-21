@@ -4,6 +4,8 @@ import bpy
 from mathutils import Vector
 
 target_object = bpy.data.objects['fluid_surface']
+# High resolution boundary mesh (FR-11)
+high_res_boundary = bpy.data.objects.get('High_resolution_boundary')
 start_frame = 752
 end_frame = 1325
 # end_frame = 754
@@ -14,7 +16,7 @@ output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
 
 # Height difference threshold for skipping samples (FR-9)
-max_height_difference = 5.0  # Configurable threshold in units
+max_height_difference = 0.2  # Configurable threshold in units
 
 # Array to store all frames
 frames_data = []
@@ -22,6 +24,34 @@ frames_data = []
 # Statistics tracking (FR-10)
 total_samples_written = 0
 total_samples_skipped = 0
+
+def is_point_in_boundary(point):
+    """Check if a point is within the High_resolution_boundary mesh (FR-11)"""
+    if high_res_boundary is None:
+        return False
+
+    # Convert point to local space of the boundary mesh
+    point_local = high_res_boundary.matrix_world.inverted() @ point
+
+    # Use ray casting to determine if point is inside the mesh
+    # Cast a ray from the point in the +Z direction
+    ray_direction = Vector((0, 0, 1))
+    hit, location, normal, index = high_res_boundary.ray_cast(point_local, ray_direction)
+
+    # If we hit the mesh, we're inside if the normal points away from our direction
+    if hit:
+        # Check if we're below the hit point (inside the mesh)
+        if point_local.z < location.z:
+            return True
+
+    # Also cast in -Z direction to be more robust
+    ray_direction = Vector((0, 0, -1))
+    hit, location, normal, index = high_res_boundary.ray_cast(point_local, ray_direction)
+    if hit:
+        if point_local.z > location.z:
+            return True
+
+    return False
 
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
@@ -65,17 +95,22 @@ for frame in range(start_frame, end_frame + 1):
             current_height = location.z
             skip_sample = False
 
-            # Check height difference with previous sample in X axis (FR-9)
-            if x > 0:
-                prev_height = all_raycasts[x - 1][y]['location'].z
-                if abs(current_height - prev_height) > max_height_difference:
-                    skip_sample = True
+            # Convert location to world coordinates for boundary check
+            location_world = target_object.matrix_world @ location
 
-            # Check height difference with next sample in X axis (FR-9)
-            if not skip_sample and x < int(x_length / step) - 1:
-                next_height = all_raycasts[x + 1][y]['location'].z
-                if abs(current_height - next_height) > max_height_difference:
-                    skip_sample = True
+            # Only apply height difference checking within high resolution boundary (FR-11)
+            if is_point_in_boundary(location_world):
+                # Check height difference with previous sample in X axis (FR-9)
+                if x > 0:
+                    prev_height = all_raycasts[x - 1][y]['location'].z
+                    if abs(current_height - prev_height) > max_height_difference:
+                        skip_sample = True
+
+                # Check height difference with next sample in X axis (FR-9)
+                if not skip_sample and x < int(x_length / step) - 1:
+                    next_height = all_raycasts[x + 1][y]['location'].z
+                    if abs(current_height - next_height) > max_height_difference:
+                        skip_sample = True
 
             if skip_sample:
                 total_samples_skipped += 1

@@ -13,8 +13,15 @@ step = 4
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
 
+# Height difference threshold for skipping samples (FR-9)
+max_height_difference = 5.0  # Configurable threshold in units
+
 # Array to store all frames
 frames_data = []
+
+# Statistics tracking (FR-10)
+total_samples_written = 0
+total_samples_skipped = 0
 
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
@@ -24,12 +31,17 @@ for frame in range(start_frame, end_frame + 1):
         "Normals": [],
         "Scales": []
     }
-    i = 0
-    for x in range(int(160 / step)):
-        for y in range(int(450 / step)):
-            i+=1
-            start_trace_x = -60
-            start_trace_y = -280
+
+    start_trace_x = -60
+    start_trace_y = -280
+    x_length = 160
+    y_length = 450
+
+    # First pass: collect all raycast data for this frame
+    all_raycasts = []
+    for x in range(int(x_length / step)):
+        row_raycasts = []
+        for y in range(int(y_length / step)):
             ray_begin = Vector((start_trace_x + step * x, start_trace_y + step * y, 100))
             ray_end = Vector((start_trace_x + step * x, start_trace_y + step * y, -100))
             ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
@@ -37,9 +49,39 @@ for frame in range(start_frame, end_frame + 1):
             ray_direction.normalize()
             hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
             normals.normalize()
+            row_raycasts.append({
+                'location': location,
+                'normals': normals,
+                'hit': hit
+            })
+        all_raycasts.append(row_raycasts)
+
+    # Second pass: check height differences and add valid samples (FR-9)
+    for x in range(int(x_length / step)):
+        for y in range(int(y_length / step)):
+            raycast_data = all_raycasts[x][y]
+            location = raycast_data['location']
+            normals = raycast_data['normals']
+            current_height = location.z
+            skip_sample = False
+
+            # Check height difference with previous sample in X axis (FR-9)
+            if x > 0:
+                prev_height = all_raycasts[x - 1][y]['location'].z
+                if abs(current_height - prev_height) > max_height_difference:
+                    skip_sample = True
+
+            # Check height difference with next sample in X axis (FR-9)
+            if not skip_sample and x < int(x_length / step) - 1:
+                next_height = all_raycasts[x + 1][y]['location'].z
+                if abs(current_height - next_height) > max_height_difference:
+                    skip_sample = True
+
+            if skip_sample:
+                total_samples_skipped += 1
+                continue
 
             # Calculate cosine of angle between normal and Z-axis (0, 0, 1)
-            # This gives you how "upward" the surface is (1.0 = flat horizontal, 0.0 = vertical)
             z_axis = Vector((0, 0, 1))
             cos_z = normals.dot(z_axis)
 
@@ -54,29 +96,25 @@ for frame in range(start_frame, end_frame + 1):
                 "Z": float(normals.z)
             })
 
-            # For testing purposes, set normals to (1,0,1) every 5th x step. To see if Unreal can display this properly.
-            # if(i%5==0):
-            #     frame_data["Normals"].append({
-            #         "X": float(1.0),
-            #         "Y": float(0.0),
-            #         "Z": float(1.0)
-            #     })
-            # else:
-            #     frame_data["Normals"].append({
-            #         "X": float(0.0),
-            #         "Y": float(0.0),
-            #         "Z": float(1.0)
-            #     })
-
             scale = 1
-            if(cos_z != 0):
-                scale = 1/float(cos_z)
+            if cos_z != 0:
+                scale = 1 / float(cos_z)
             else:
                 scale = 10000
             frame_data["Scales"].append(scale)
+            total_samples_written += 1
+
     frames_data.append(frame_data)
     print(f"Processed frame {frame}")
-output_filepath=os.path.join(output_directory,output_filename)
+output_filepath = os.path.join(output_directory, output_filename)
 with open(output_filepath, "w") as file:
     json.dump(frames_data, file, indent=2)
+
+# Print statistics (FR-10)
+total_samples = total_samples_written + total_samples_skipped
+skip_percentage = (total_samples_skipped / total_samples * 100) if total_samples > 0 else 0
+
 print("Export completed!")
+print(f"Samples written: {total_samples_written}")
+print(f"Samples skipped: {total_samples_skipped}")
+print(f"Percentage skipped: {skip_percentage:.2f}%")

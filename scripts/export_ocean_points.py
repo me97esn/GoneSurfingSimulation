@@ -86,7 +86,7 @@ for frame in range(start_frame, end_frame + 1):
             })
         all_raycasts.append(row_raycasts)
 
-    # Second pass: check height differences and add valid samples (FR-9)
+    # Second pass: check height differences and handle samples (FR-9, FR-12, FR-13)
     for x in range(int(x_length / step)):
         for y in range(int(y_length / step)):
             raycast_data = all_raycasts[x][y]
@@ -112,32 +112,52 @@ for frame in range(start_frame, end_frame + 1):
                     if abs(current_height - next_height) > max_height_difference:
                         skip_sample = True
 
+            # FR-12: Resample with half step size for high-difference areas
             if skip_sample:
-                total_samples_skipped += 1
-                continue
+                # Sample with half step in both x and y directions
+                half_step = step / 2
+                for dx in [0, half_step]:
+                    for dy in [0, half_step]:
+                        ray_x = start_trace_x + step * x + dx
+                        ray_y = start_trace_y + step * y + dy
+                        ray_begin = Vector((ray_x, ray_y, 100))
+                        ray_end = Vector((ray_x, ray_y, -100))
+                        ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                        ray_direction = ray_end - ray_begin
+                        ray_direction.normalize()
+                        hit, loc, norm, index = target_object.ray_cast(ray_begin_local, ray_direction)
 
-            # Calculate cosine of angle between normal and Z-axis (0, 0, 1)
-            z_axis = Vector((0, 0, 1))
-            cos_z = normals.dot(z_axis)
-
-            frame_data["Positions"].append({
-                "X": float(location.x),
-                "Y": float(location.y),
-                "Z": float(location.z)
-            })
-            frame_data["Normals"].append({
-                "X": float(normals.x),
-                "Y": float(normals.y),
-                "Z": float(normals.z)
-            })
-
-            scale = 1
-            if cos_z != 0:
-                scale = 1 / float(cos_z)
+                        if hit:
+                            norm.normalize()
+                            frame_data["Positions"].append({
+                                "X": float(loc.x),
+                                "Y": float(loc.y),
+                                "Z": float(loc.z)
+                            })
+                            frame_data["Normals"].append({
+                                "X": float(norm.x),
+                                "Y": float(norm.y),
+                                "Z": float(norm.z)
+                            })
+                            # FR-13: Store step size scale (half_step / step = 0.5)
+                            frame_data["Scales"].append(0.5)
+                            total_samples_written += 1
+                total_samples_skipped += 1  # Count original sample as skipped
             else:
-                scale = 10000
-            frame_data["Scales"].append(scale)
-            total_samples_written += 1
+                # Add the regular sample with normal step size
+                frame_data["Positions"].append({
+                    "X": float(location.x),
+                    "Y": float(location.y),
+                    "Z": float(location.z)
+                })
+                frame_data["Normals"].append({
+                    "X": float(normals.x),
+                    "Y": float(normals.y),
+                    "Z": float(normals.z)
+                })
+                # FR-13: Store step size scale (step / step = 1.0)
+                frame_data["Scales"].append(1.0)
+                total_samples_written += 1
 
     frames_data.append(frame_data)
     print(f"Processed frame {frame}")

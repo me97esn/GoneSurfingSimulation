@@ -21,6 +21,7 @@ This should create a script that can be run in blender, that exports all of the 
 12. **FR-12**: The samples identified in **FR-9** and **FR-11** should no longer be skipped. Quite the opposite: these samples should be run with half the step size as the other samples, resulting in more samples with shorter distance between.
 13. **FR-13**: Since I now use varying step size for the sampling, this has to be stored in the result as well. Write this into the frame_date["Scales"], with value for each sample being size of this step divided by the original size of the step. Example: step=5, currentStep=5, scale=1
 14. **FR-14**: The scale calculated in **FR-13** should also be multiplied with 1/cos of the normal. Steeper samples should have higher scale. This should be included both for the high resolution and low resolution samples.
+15. **FR-15**: The sample location of the high resolution samples should match the location of the low resolution samples, so that every second high res sample is done in the same location as the low resolution sampling was/would be done.
 
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable

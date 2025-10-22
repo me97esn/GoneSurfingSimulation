@@ -112,12 +112,14 @@ for frame in range(start_frame, end_frame + 1):
                     if abs(current_height - next_height) > max_height_difference:
                         skip_sample = True
 
-            # FR-12: Resample with half step size for high-difference areas
+            # FR-12 & FR-15: Resample with half step size for high-difference areas
             if skip_sample:
                 # Sample with half step in both x and y directions
+                # FR-15: Center the high-res grid so blocks align perfectly with low-res grid
                 half_step = step / 2
-                for dx in [0, half_step]:
-                    for dy in [0, half_step]:
+                quarter_step = step / 4
+                for dx in [-quarter_step, quarter_step]:
+                    for dy in [-quarter_step, quarter_step]:
                         ray_x = start_trace_x + step * x + dx
                         ray_y = start_trace_y + step * y + dy
                         ray_begin = Vector((ray_x, ray_y, 100))

@@ -6,11 +6,9 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 
 ## Export the wave animation (Alternative: Alembic, for use in desktop games)
 
-. From blender, open the file breaking_waves_beach_break_2_water_display.blend. Add or edit modifier:Remesh with settings, voxelsize: 0.5, adaptivity: 0.
-2. Set the start frame to 1 (Important! Even if the waves should start at a later frame, the animation has to be exported from the first frame, otherwise it will be corrupted) and the end frame to prefered end frame (currently 868). NOTE: Last time I wrote this, I wrote 0. But this doesn't work and I beleive this is incorrect. frame 0 gave an error when trying to import into UE4. But this could be because both the simulation and the animation starts at frame 1. Perhaps the important thing is to start on the first simulation&animation frame?
-3. Select the water and export as alembic: Selected objects only, scale: 1.000,
-   uncheck: Vertex colors, Face sets, Use subdivision Schema, Apply subsurf, Curves as Mesh, Triangulate,;Export hair, Export particles, Flatten hierarchy
-   Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Islands
+. From blender, open the file breaking_waves_beach_break_2_water_display.blend. Add or edit modifier:Remesh with settings, voxelsize: 0.5, adaptivity: 0. 2. Set the start frame to 1 (Important! Even if the waves should start at a later frame, the animation has to be exported from the first frame, otherwise it will be corrupted) and the end frame to prefered end frame (currently 868). NOTE: Last time I wrote this, I wrote 0. But this doesn't work and I beleive this is incorrect. frame 0 gave an error when trying to import into UE4. But this could be because both the simulation and the animation starts at frame 1. Perhaps the important thing is to start on the first simulation&animation frame? 3. Select the water and export as alembic: Selected objects only, scale: 1.000,
+uncheck: Vertex colors, Face sets, Use subdivision Schema, Apply subsurf, Curves as Mesh, Triangulate,;Export hair, Export particles, Flatten hierarchy
+Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Islands
 
 4. To export the simulation from blender to UE4, use alembic exporter. But for this exporter to export the animation, and not only the first frame, a modifier has to be added to the water surface (as of this writing. This bug should be fixed by now, but apparantly isn't).
 5. Go to frame 1, and set the simulation and animation to start on frame 1
@@ -18,14 +16,14 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 7. To import this animation into ue4: use geometry cache which imports the entire animation. I have often had problems with normals being on the inside. I have not been able to solve that satisfactory, but the way I handle it is by setting the water material in UE4 to be double sided.
 
 ## Export the wave animation (Alternative json file, for use in mobile games)
-1. From blender, open the file breaking_waves_beach_break_2_water_display.blend. 
+
+1. From blender, open the file breaking_waves_beach_break_2_water_display.blend.
 2. Open a Text Editor view in Blender.
 3. Press Alt + O, or go to Text>Open Text Block and open the export_ocean_points.py file
 4. adjust the start frame and end frame. Roughly 300 frames works, but exporting too much crashes blender.
 5. Adjust the resulting file name. If the export is split into multiple files, a new file name has to be choosen.
 6. Then simply press Run script :D
 7. The json file(s) can then be imported into Unreal using the WavePointsDataStruct.
-
 
 ## Import the alembic animation into UE4
 
@@ -50,12 +48,12 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 
 ### Convert to Niagara Datatable format (for Unreal Engine)
 
-1. Open the script `export_white_water_plain_niagara_datatable.js`
+1. Open the script `export_white_water_points.js`
    - Make sure that the `dir` variable points to the folder containing the exported OBJ files
    - Make sure that `startFrame` matches the frame number used in the export
 2. Run the script:
    ```bash
-   node export_white_water_plain_niagara_datatable.js [output_file_path]
+   node export_white_water_points.js [output_file_path]
    ```
    - If no output path is provided, the file will be saved as `white-water-points-data.json` in the source directory
 3. In UE4/UE5, import the JSON file as a datatable
@@ -68,9 +66,9 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
 
 1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
-1.Open a Text Editor view in Blender.
-1.Press Alt + O, or go to Text>Open Text Block and open the .py file
-1.Then simply press Run script :D
+   1.Open a Text Editor view in Blender.
+   1.Press Alt + O, or go to Text>Open Text Block and open the .py file
+   1.Then simply press Run script :D
 1. After the export is finished: The samples are converted in the same step as the velocity data below
 
 ## Water forces/velocities

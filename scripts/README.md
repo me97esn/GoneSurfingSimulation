@@ -36,21 +36,32 @@ run the script `./open_simulation.sh` to open blender with the simulation. This 
 
 ## White water
 
-1. run `./open_simulation.sh`
+### Export white water particles from Blender
+
+1. Run `./open_simulation.sh`
 2. Set the start frame to the correct start frame (don't have to be 0) and the end frame to the same as in the wave animation export (868)
-3. select the white water foam object
-4. export as obj files. Settings:
-   Selection only
-   Object as Obj Objects
-   Animation
-   Forward: X Forward
-   Up: Z Up
-5. Open the script `convert_whitewater_obj_files_to_houdini_json.js`.
-   - Make sure that the path in this file is the same as the previosly exported obj files
-   - Make sure that the startFrame is correct
-6. Run the script `./convert_whitewater_obj_files_to_hjson.sh` which creates a datatable file for UE4 to import
-7. In UE4, re-import the json files
-8. In UE4, re-compile the particle system
+3. Select the white water foam object
+4. Export as obj files. Settings:
+   - Selection only
+   - Object as Obj Objects
+   - Animation
+   - Forward: X Forward
+   - Up: Z Up
+
+### Convert to Niagara Datatable format (for Unreal Engine)
+
+1. Open the script `export_white_water_plain_niagara_datatable.js`
+   - Make sure that the `dir` variable points to the folder containing the exported OBJ files
+   - Make sure that `startFrame` matches the frame number used in the export
+2. Run the script:
+   ```bash
+   node export_white_water_plain_niagara_datatable.js [output_file_path]
+   ```
+   - If no output path is provided, the file will be saved as `white-water-points-data.json` in the source directory
+3. In UE4/UE5, import the JSON file as a datatable
+4. In UE4/UE5, configure your Niagara particle system to use the imported datatable
+
+**Note**: This script exports particle positions in the same format as `export_ocean_points.py` (WavePointsData format), making it compatible with Niagara systems that use this structure.
 
 ## Water height
 

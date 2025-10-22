@@ -139,8 +139,13 @@ for frame in range(start_frame, end_frame + 1):
                                 "Y": float(norm.y),
                                 "Z": float(norm.z)
                             })
-                            # FR-13: Store step size scale (half_step / step = 0.5)
-                            frame_data["Scales"].append(0.5)
+                            # FR-13 & FR-14: Store step size scale multiplied by normal-based scale
+                            z_axis = Vector((0, 0, 1))
+                            cos_z = norm.dot(z_axis)
+                            normal_scale = 1 / float(cos_z) if cos_z != 0 else 3
+                            step_scale = 0.5  # half_step / step
+                            combined_scale = step_scale * normal_scale
+                            frame_data["Scales"].append(combined_scale)
                             total_samples_written += 1
                 total_samples_skipped += 1  # Count original sample as skipped
             else:
@@ -155,8 +160,13 @@ for frame in range(start_frame, end_frame + 1):
                     "Y": float(normals.y),
                     "Z": float(normals.z)
                 })
-                # FR-13: Store step size scale (step / step = 1.0)
-                frame_data["Scales"].append(1.0)
+                # FR-13 & FR-14: Store step size scale multiplied by normal-based scale
+                z_axis = Vector((0, 0, 1))
+                cos_z = normals.dot(z_axis)
+                normal_scale = 1 / float(cos_z) if cos_z != 0 else 3
+                step_scale = 1.0  # step / step
+                combined_scale = step_scale * normal_scale
+                frame_data["Scales"].append(combined_scale)
                 total_samples_written += 1
 
     frames_data.append(frame_data)

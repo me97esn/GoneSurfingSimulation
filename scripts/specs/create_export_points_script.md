@@ -20,6 +20,7 @@ This should create a script that can be run in blender, that exports all of the 
 11. **FR-11**: I have added a mesh named 'High_resolution_boundary' to the blender file. Only samples within the boundaries of this mesh should be handled in the **FR-9** requirement.
 12. **FR-12**: The samples identified in **FR-9** and **FR-11** should no longer be skipped. Quite the opposite: these samples should be run with half the step size as the other samples, resulting in more samples with shorter distance between.
 13. **FR-13**: Since I now use varying step size for the sampling, this has to be stored in the result as well. Write this into the frame_date["Scales"], with value for each sample being size of this step divided by the original size of the step. Example: step=5, currentStep=5, scale=1
+14. **FR-14**: The scale calculated in **FR-13** should also be multiplied with 1/cos of the normal. Steeper samples should have higher scale. This should be included both for the high resolution and low resolution samples.
 
 ### Non-Functional Requirements
 1. **NFR-1**: The implementation shall be simple and readable

@@ -86,17 +86,30 @@ for frame in range(start_frame, end_frame + 1):
             })
         all_raycasts.append(row_raycasts)
 
-    # Second pass: check height differences and handle samples (FR-9, FR-12, FR-13)
+    # Calculate 99th percentile for FR-16 (highest 1% threshold)
+    all_heights = []
+    for row in all_raycasts:
+        for raycast in row:
+            if raycast['hit']:
+                all_heights.append(raycast['location'].z)
+    all_heights.sort()
+    percentile_99_index = int(len(all_heights) * 0.99)
+    height_threshold_top_1_percent = all_heights[percentile_99_index] if all_heights else float('inf')
+
+    # Second pass: check height differences and handle samples (FR-9, FR-12, FR-13, FR-16)
     for x in range(int(x_length / step)):
         for y in range(int(y_length / step)):
             raycast_data = all_raycasts[x][y]
             location = raycast_data['location']
             normals = raycast_data['normals']
             current_height = location.z
-            skip_sample = False
+            needs_high_res = False
 
             # Convert location to world coordinates for boundary check
             location_world = target_object.matrix_world @ location
+
+            # FR-16: Check if sample is in the highest 1%
+            is_top_1_percent = current_height >= height_threshold_top_1_percent
 
             # Only apply height difference checking within high resolution boundary (FR-11)
             if is_point_in_boundary(location_world):
@@ -104,16 +117,20 @@ for frame in range(start_frame, end_frame + 1):
                 if x > 0:
                     prev_height = all_raycasts[x - 1][y]['location'].z
                     if abs(current_height - prev_height) > max_height_difference:
-                        skip_sample = True
+                        needs_high_res = True
 
                 # Check height difference with next sample in X axis (FR-9)
-                if not skip_sample and x < int(x_length / step) - 1:
+                if not needs_high_res and x < int(x_length / step) - 1:
                     next_height = all_raycasts[x + 1][y]['location'].z
                     if abs(current_height - next_height) > max_height_difference:
-                        skip_sample = True
+                        needs_high_res = True
+
+            # FR-16: Also use high resolution for highest 1% of samples
+            if is_top_1_percent:
+                needs_high_res = True
 
             # FR-12 & FR-15: Resample with half step size for high-difference areas
-            if skip_sample:
+            if needs_high_res:
                 # Sample with half step in both x and y directions
                 # FR-15: Center the high-res grid so blocks align perfectly with low-res grid
                 half_step = step / 2

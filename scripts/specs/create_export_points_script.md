@@ -29,11 +29,12 @@ This should create a script that can be run in blender, that exports all of the 
 15. **FR-15**: The high resolution grid and the low resolution grid should align
 16. **FR-16**: The highest 1% of the samples should also use high resolution.
 17. **FR-17**: The scale of any of the samples should never exceed 3.0
-18. **FR-18**: The samples with steepest normals should be handled differently. They should be ignored from the original sampling, and instead use a separate ray_cast. This separate ray_cast should be sideways or front-to-back instead of straight down. This will make it possible to find samples on a vertical part of the wave as well. These samples should also use high resolution sampling.
+18. **FR-18**: The samples with steepest normals should be handled differently. They should be ignored from the original sampling, and instead use a separate ray_cast. This separate ray_cast should be sideways or front-to-back instead of straight down. I don't know at the time of righting which of the directions should be used, both will have to be tested to see which achieves the best results.
 19. **FR-19**: The steep normal samples should also have their scale calculated the same way as the other samples.
 20. **FR-20**: The steep normal samples should also be limited to a maximum scale of 3.0
 21. **FR-21**: Introduce an even lower resolution sampling for the areas outside the high resolution boundary. This low resolution sampling should have double the step size of the original low resolution sampling.
 22. **FR-22**: The samples from the even lower resolution sampling should also have their scale calculated the same way as the other samples.
+23. **FR-23**: The samples from the steep waves should also use high resolution sampling.
 
 ### Non-Functional Requirements
 

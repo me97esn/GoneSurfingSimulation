@@ -21,7 +21,10 @@ max_height_difference = 0.12  # Configurable threshold in units
 # Steep normal threshold for sideways ray casting (FR-18)
 steep_normal_threshold = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
 # Sideways ray casting direction: 'x' for sideways, 'y' for front-to-back (FR-18)
-steep_ray_direction = 'x'  # Configurable: 'x' or 'y'
+steep_ray_direction = 'y'  # Configurable: 'x' or 'y'
+
+# Maximum scale limit for all samples (FR-17, FR-20)
+max_scale = 3.0
 
 # Array to store all frames
 frames_data = []
@@ -143,10 +146,10 @@ for frame in range(start_frame, end_frame + 1):
                     # FR-19, FR-20: Calculate scale for steep samples
                     z_axis = Vector((0, 0, 1))
                     cos_z = normals.dot(z_axis)
-                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else 3
+                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
                     step_scale = current_step / step
                     combined_scale = step_scale * normal_scale
-                    combined_scale = min(combined_scale, 3.0)  # FR-20
+                    combined_scale = min(combined_scale, max_scale)  # FR-20
                     frame_data["Scales"].append(combined_scale)
                     total_samples_written += 1
 
@@ -188,10 +191,10 @@ for frame in range(start_frame, end_frame + 1):
                     # FR-19, FR-20: Calculate scale for steep samples
                     z_axis = Vector((0, 0, 1))
                     cos_z = normals.dot(z_axis)
-                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else 3
+                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
                     step_scale = current_step / step
                     combined_scale = step_scale * normal_scale
-                    combined_scale = min(combined_scale, 3.0)  # FR-20
+                    combined_scale = min(combined_scale, max_scale)  # FR-20
                     frame_data["Scales"].append(combined_scale)
                     total_samples_written += 1
 
@@ -281,11 +284,11 @@ for frame in range(start_frame, end_frame + 1):
                             # FR-13 & FR-14: Store step size scale multiplied by normal-based scale
                             z_axis = Vector((0, 0, 1))
                             cos_z = norm.dot(z_axis)
-                            normal_scale = 1 / float(cos_z) if cos_z != 0 else 3
+                            normal_scale = 1 / float(cos_z) if cos_z != 0 else max_scale
                             step_scale = 0.5  # half_step / step
                             combined_scale = step_scale * normal_scale
                             # FR-17: Limit scale to maximum of 3.0
-                            combined_scale = min(combined_scale, 3.0)
+                            combined_scale = min(combined_scale, max_scale)
                             frame_data["Scales"].append(combined_scale)
                             total_samples_written += 1
                 total_samples_skipped += 1  # Count original sample as skipped
@@ -311,10 +314,10 @@ for frame in range(start_frame, end_frame + 1):
                 # FR-13, FR-14, FR-22: Store step size scale multiplied by normal-based scale
                 z_axis = Vector((0, 0, 1))
                 cos_z = normals.dot(z_axis)
-                normal_scale = 1 / float(cos_z) if cos_z != 0 else 3
+                normal_scale = 1 / float(cos_z) if cos_z != 0 else max_scale
                 combined_scale = current_step_scale * normal_scale
                 # FR-17: Limit scale to maximum of 3.0
-                combined_scale = min(combined_scale, 3.0)
+                combined_scale = min(combined_scale, max_scale)
                 frame_data["Scales"].append(combined_scale)
                 total_samples_written += 1
 

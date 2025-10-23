@@ -35,6 +35,11 @@ This should create a script that can be run in blender, that exports all of the 
 21. **FR-21**: Introduce an even lower resolution sampling for the areas outside the high resolution boundary. This low resolution sampling should have double the step size of the original low resolution sampling.
 22. **FR-22**: The samples from the even lower resolution sampling should also have their scale calculated the same way as the other samples.
 23. **FR-23**: The samples from the steep waves should also use high resolution sampling.
+24. **FR-24**: The scales of the lower sample blocks should be adjusted just as the high resolution samle blocks are.
+25. **FR-25**: No blocks with normal steeper then the steep_normal_threshold should have lower resolution then high. Any blocks steeper then this threshold and found with the low or lower resolution ray tracing should be skipped.
+26. **FR-26**: The steeper sampling should be configurable to perform tracing from 4 directions: -x, x, -y, y.
+27. **FR-27**: the high resolution grid, low resolution grid and lower resolution grid should all align.
+28. **FR-28**: The steeper sampling should only use high resolution sampling, but only include those hits with normal steeper then in **FR-18**.
 
 ### Non-Functional Requirements
 
@@ -72,3 +77,16 @@ This should create a script that can be run in blender, that exports all of the 
   - Samples skipped count
   - Percentage of skipped samples
 - Scale calculation based on normal direction (FR-8) already implemented
+- FR-26 implemented: Steep normal ray casting now supports 4 configurable directions (-x, x, -y, y)
+  - Changed `steep_ray_direction` (single value) to `steep_ray_directions` (list)
+  - All configured directions are processed in a loop
+  - Default configuration includes all 4 directions: ['x', '-x', 'y', '-y']
+- FR-27 implemented: All grids properly align
+  - High-res grid uses step/2 with quarter_step offsets, centered on low-res grid
+  - Low-res grid uses step at original grid positions
+  - Lower-res grid uses double step size, sampling every other point (x % 2 == 0 and y % 2 == 0)
+  - All three grids are aligned to ensure consistent spacing
+- FR-28 implemented: Steep sampling always uses high resolution
+  - Removed conditional step sizing for steep samples
+  - All steep normal samples now use step/2 (high resolution) regardless of location
+  - Step scale is always 0.5 for steep samples

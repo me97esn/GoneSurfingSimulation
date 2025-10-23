@@ -20,11 +20,11 @@ max_height_difference = 0.12  # Configurable threshold in units
 
 # Steep normal threshold for sideways ray casting (FR-18)
 steep_normal_threshold = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
-# Sideways ray casting direction: 'x' for sideways, 'y' for front-to-back (FR-18)
-steep_ray_direction = 'y'  # Configurable: 'x' or 'y'
+# Sideways ray casting directions (FR-26): can include '-x', 'x', '-y', 'y'
+steep_ray_directions = ['x', '-x', 'y', '-y']  # Configurable list of directions
 
 # Maximum scale limit for all samples (FR-17, FR-20)
-max_scale = 3.0
+max_scale = 4
 
 # Array to store all frames
 frames_data = []
@@ -110,98 +110,185 @@ for frame in range(start_frame, end_frame + 1):
     percentile_99_index = int(len(all_heights) * 0.99)
     height_threshold_top_1_percent = all_heights[percentile_99_index] if all_heights else float('inf')
 
-    # FR-18 & FR-23: Process steep normals with sideways ray casting over entire model
+    # FR-18, FR-23, FR-26: Process steep normals with sideways ray casting from multiple directions
     steep_samples_processed = set()  # Track which grid positions have steep samples
-    if steep_ray_direction == 'x':
-        # Ray casting in X direction (sideways)
-        for y in range(int(y_length / step)):
-            for z_pos in range(-5, 105, 1):  # Scan through height range
-                ray_y = start_trace_y + step * y
-                ray_begin = Vector((-60, ray_y, z_pos))
-                ray_end = Vector((100, ray_y, z_pos))
-                ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
-                ray_direction_vec = ray_end - ray_begin
-                ray_direction_vec.normalize()
-                hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                if hit and is_steep_normal(normals):
-                    normals.normalize()
-                    location_world = target_object.matrix_world @ location
+    for direction in steep_ray_directions:
+        if direction == 'x':
+            # Ray casting in +X direction (left to right)
+            for y in range(int(y_length / step)):
+                for z_pos in range(-5, 105, 1):  # Scan through height range
+                    ray_y = start_trace_y + step * y
+                    ray_begin = Vector((-60, ray_y, z_pos))
+                    ray_end = Vector((100, ray_y, z_pos))
+                    ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                    ray_direction_vec = ray_end - ray_begin
+                    ray_direction_vec.normalize()
+                    hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    # Check if this is in high-res boundary or top 1% for high-res sampling (FR-23)
-                    is_in_boundary = is_point_in_boundary(location_world)
-                    is_top_1 = location.z >= height_threshold_top_1_percent
-                    current_step = step / 2 if (is_in_boundary or is_top_1) else step
+                    if hit and is_steep_normal(normals):
+                        normals.normalize()
+                        location_world = target_object.matrix_world @ location
 
-                    frame_data["Positions"].append({
-                        "X": float(location.x),
-                        "Y": float(location.y),
-                        "Z": float(location.z)
-                    })
-                    frame_data["Normals"].append({
-                        "X": float(normals.x),
-                        "Y": float(normals.y),
-                        "Z": float(normals.z)
-                    })
-                    # FR-19, FR-20: Calculate scale for steep samples
-                    z_axis = Vector((0, 0, 1))
-                    cos_z = normals.dot(z_axis)
-                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
-                    step_scale = current_step / step
-                    combined_scale = step_scale * normal_scale
-                    combined_scale = min(combined_scale, max_scale)  # FR-20
-                    frame_data["Scales"].append(combined_scale)
-                    total_samples_written += 1
+                        # FR-28: Steep sampling always uses high resolution (step/2)
+                        current_step = step / 2
 
-                    # Mark grid position as having steep sample
-                    grid_x = int((location.x - start_trace_x) / step)
-                    grid_y = int((location.y - start_trace_y) / step)
-                    steep_samples_processed.add((grid_x, grid_y))
-    else:  # steep_ray_direction == 'y'
-        # Ray casting in Y direction (front-to-back)
-        for x in range(int(x_length / step)):
-            for z_pos in range(-5, 105, 1):  # Scan through height range
-                ray_x = start_trace_x + step * x
-                ray_begin = Vector((ray_x, -280, z_pos))
-                ray_end = Vector((ray_x, 170, z_pos))
-                ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
-                ray_direction_vec = ray_end - ray_begin
-                ray_direction_vec.normalize()
-                hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
+                        frame_data["Positions"].append({
+                            "X": float(location.x),
+                            "Y": float(location.y),
+                            "Z": float(location.z)
+                        })
+                        frame_data["Normals"].append({
+                            "X": float(normals.x),
+                            "Y": float(normals.y),
+                            "Z": float(normals.z)
+                        })
+                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
+                        z_axis = Vector((0, 0, 1))
+                        cos_z = normals.dot(z_axis)
+                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
+                        combined_scale = step_scale * normal_scale
+                        combined_scale = min(combined_scale, max_scale)  # FR-20
+                        frame_data["Scales"].append(combined_scale)
+                        total_samples_written += 1
 
-                if hit and is_steep_normal(normals):
-                    normals.normalize()
-                    location_world = target_object.matrix_world @ location
+                        # Mark grid position as having steep sample
+                        grid_x = int((location.x - start_trace_x) / step)
+                        grid_y = int((location.y - start_trace_y) / step)
+                        steep_samples_processed.add((grid_x, grid_y))
 
-                    # Check if this is in high-res boundary or top 1% for high-res sampling (FR-23)
-                    is_in_boundary = is_point_in_boundary(location_world)
-                    is_top_1 = location.z >= height_threshold_top_1_percent
-                    current_step = step / 2 if (is_in_boundary or is_top_1) else step
+        elif direction == '-x':
+            # Ray casting in -X direction (right to left)
+            for y in range(int(y_length / step)):
+                for z_pos in range(-5, 105, 1):  # Scan through height range
+                    ray_y = start_trace_y + step * y
+                    ray_begin = Vector((100, ray_y, z_pos))
+                    ray_end = Vector((-60, ray_y, z_pos))
+                    ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                    ray_direction_vec = ray_end - ray_begin
+                    ray_direction_vec.normalize()
+                    hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    frame_data["Positions"].append({
-                        "X": float(location.x),
-                        "Y": float(location.y),
-                        "Z": float(location.z)
-                    })
-                    frame_data["Normals"].append({
-                        "X": float(normals.x),
-                        "Y": float(normals.y),
-                        "Z": float(normals.z)
-                    })
-                    # FR-19, FR-20: Calculate scale for steep samples
-                    z_axis = Vector((0, 0, 1))
-                    cos_z = normals.dot(z_axis)
-                    normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
-                    step_scale = current_step / step
-                    combined_scale = step_scale * normal_scale
-                    combined_scale = min(combined_scale, max_scale)  # FR-20
-                    frame_data["Scales"].append(combined_scale)
-                    total_samples_written += 1
+                    if hit and is_steep_normal(normals):
+                        normals.normalize()
+                        location_world = target_object.matrix_world @ location
 
-                    # Mark grid position as having steep sample
-                    grid_x = int((location.x - start_trace_x) / step)
-                    grid_y = int((location.y - start_trace_y) / step)
-                    steep_samples_processed.add((grid_x, grid_y))
+                        # FR-28: Steep sampling always uses high resolution (step/2)
+                        current_step = step / 2
+
+                        frame_data["Positions"].append({
+                            "X": float(location.x),
+                            "Y": float(location.y),
+                            "Z": float(location.z)
+                        })
+                        frame_data["Normals"].append({
+                            "X": float(normals.x),
+                            "Y": float(normals.y),
+                            "Z": float(normals.z)
+                        })
+                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
+                        z_axis = Vector((0, 0, 1))
+                        cos_z = normals.dot(z_axis)
+                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
+                        combined_scale = step_scale * normal_scale
+                        combined_scale = min(combined_scale, max_scale)  # FR-20
+                        frame_data["Scales"].append(combined_scale)
+                        total_samples_written += 1
+
+                        # Mark grid position as having steep sample
+                        grid_x = int((location.x - start_trace_x) / step)
+                        grid_y = int((location.y - start_trace_y) / step)
+                        steep_samples_processed.add((grid_x, grid_y))
+
+        elif direction == 'y':
+            # Ray casting in +Y direction (back to front)
+            for x in range(int(x_length / step)):
+                for z_pos in range(-5, 105, 1):  # Scan through height range
+                    ray_x = start_trace_x + step * x
+                    ray_begin = Vector((ray_x, -280, z_pos))
+                    ray_end = Vector((ray_x, 170, z_pos))
+                    ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                    ray_direction_vec = ray_end - ray_begin
+                    ray_direction_vec.normalize()
+                    hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
+
+                    if hit and is_steep_normal(normals):
+                        normals.normalize()
+                        location_world = target_object.matrix_world @ location
+
+                        # FR-28: Steep sampling always uses high resolution (step/2)
+                        current_step = step / 2
+
+                        frame_data["Positions"].append({
+                            "X": float(location.x),
+                            "Y": float(location.y),
+                            "Z": float(location.z)
+                        })
+                        frame_data["Normals"].append({
+                            "X": float(normals.x),
+                            "Y": float(normals.y),
+                            "Z": float(normals.z)
+                        })
+                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
+                        z_axis = Vector((0, 0, 1))
+                        cos_z = normals.dot(z_axis)
+                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
+                        combined_scale = step_scale * normal_scale
+                        combined_scale = min(combined_scale, max_scale)  # FR-20
+                        frame_data["Scales"].append(combined_scale)
+                        total_samples_written += 1
+
+                        # Mark grid position as having steep sample
+                        grid_x = int((location.x - start_trace_x) / step)
+                        grid_y = int((location.y - start_trace_y) / step)
+                        steep_samples_processed.add((grid_x, grid_y))
+
+        elif direction == '-y':
+            # Ray casting in -Y direction (front to back)
+            for x in range(int(x_length / step)):
+                for z_pos in range(-5, 105, 1):  # Scan through height range
+                    ray_x = start_trace_x + step * x
+                    ray_begin = Vector((ray_x, 170, z_pos))
+                    ray_end = Vector((ray_x, -280, z_pos))
+                    ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                    ray_direction_vec = ray_end - ray_begin
+                    ray_direction_vec.normalize()
+                    hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
+
+                    if hit and is_steep_normal(normals):
+                        normals.normalize()
+                        location_world = target_object.matrix_world @ location
+
+                        # FR-28: Steep sampling always uses high resolution (step/2)
+                        current_step = step / 2
+
+                        frame_data["Positions"].append({
+                            "X": float(location.x),
+                            "Y": float(location.y),
+                            "Z": float(location.z)
+                        })
+                        frame_data["Normals"].append({
+                            "X": float(normals.x),
+                            "Y": float(normals.y),
+                            "Z": float(normals.z)
+                        })
+                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
+                        z_axis = Vector((0, 0, 1))
+                        cos_z = normals.dot(z_axis)
+                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
+                        combined_scale = step_scale * normal_scale
+                        combined_scale = min(combined_scale, max_scale)  # FR-20
+                        frame_data["Scales"].append(combined_scale)
+                        total_samples_written += 1
+
+                        # Mark grid position as having steep sample
+                        grid_x = int((location.x - start_trace_x) / step)
+                        grid_y = int((location.y - start_trace_y) / step)
+                        steep_samples_processed.add((grid_x, grid_y))
 
     # Second pass: check height differences and handle samples (FR-9, FR-12, FR-13, FR-16)
     for x in range(int(x_length / step)):

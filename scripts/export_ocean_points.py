@@ -15,8 +15,12 @@ step = 4
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
 
-# Height difference threshold for high res samples (FR-9)
-max_height_difference = 0.12  # Configurable threshold in units
+# Normal-based resolution thresholds (FR-31)
+# Resolution is determined by the steepness of the normal (angle from vertical)
+# cos(angle_from_vertical) = abs(normal.z)
+low_res_threshold = 0.95  # Close to vertical (< ~18 degrees) - use low resolution (2x step)
+medium_res_threshold = 0.7  # Moderate slope (< ~45 degrees) - use medium resolution (1x step)
+# Steeper than medium_res_threshold - use high resolution (0.5x step)
 
 # Steep normal threshold for sideways ray casting (FR-18)
 steep_normal_threshold = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
@@ -30,8 +34,14 @@ max_scale = 4
 # Samples with cos < this value will be skipped to prevent excessively large scales
 min_cos_trace = 0.6  # 50 degrees from perpendicular, limits scale to 4.0 before max_scale clamp
 
-# Array to store all frames
-frames_data = []
+# Arrays to store all frames by direction (FR-32)
+frames_data_by_direction = {
+    'vertical': [],
+    'x': [],
+    '-x': [],
+    'y': [],
+    '-y': []
+}
 
 # Statistics tracking (FR-10)
 total_samples_written = 0
@@ -73,11 +83,38 @@ def is_steep_normal(normal):
 
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
-    frame_data = {
-        "Name": f"Frame_{frame}",
-        "Positions": [],
-        "Normals": [],
-        "Scales": []
+    # FR-32: Separate data structures for each ray direction
+    frame_data_by_direction = {
+        'vertical': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        },
+        'x': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        },
+        '-x': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        },
+        'y': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        },
+        '-y': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        }
     }
 
     start_trace_x = -60
@@ -120,6 +157,7 @@ for frame in range(start_frame, end_frame + 1):
     for direction in steep_ray_directions:
         if direction == 'x':
             # Ray casting in +X direction (left to right)
+            frame_data = frame_data_by_direction['x']  # FR-32: Use direction-specific data
             for y in range(int(y_length / step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
                     ray_y = start_trace_y + step * y
@@ -168,6 +206,7 @@ for frame in range(start_frame, end_frame + 1):
 
         elif direction == '-x':
             # Ray casting in -X direction (right to left)
+            frame_data = frame_data_by_direction['-x']  # FR-32: Use direction-specific data
             for y in range(int(y_length / step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
                     ray_y = start_trace_y + step * y
@@ -216,6 +255,7 @@ for frame in range(start_frame, end_frame + 1):
 
         elif direction == 'y':
             # Ray casting in +Y direction (back to front)
+            frame_data = frame_data_by_direction['y']  # FR-32: Use direction-specific data
             for x in range(int(x_length / step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
                     ray_x = start_trace_x + step * x
@@ -264,6 +304,7 @@ for frame in range(start_frame, end_frame + 1):
 
         elif direction == '-y':
             # Ray casting in -Y direction (front to back)
+            frame_data = frame_data_by_direction['-y']  # FR-32: Use direction-specific data
             for x in range(int(x_length / step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
                     ray_x = start_trace_x + step * x
@@ -310,7 +351,8 @@ for frame in range(start_frame, end_frame + 1):
                         grid_y = int((location.y - start_trace_y) / step)
                         steep_samples_processed.add((grid_x, grid_y))
 
-    # Second pass: check height differences and handle samples (FR-9, FR-12, FR-13, FR-16)
+    # Second pass: process vertical samples (FR-31, FR-32)
+    frame_data = frame_data_by_direction['vertical']  # FR-32: Use direction-specific data for vertical rays
     for x in range(int(x_length / step)):
         for y in range(int(y_length / step)):
             raycast_data = all_raycasts[x][y]
@@ -322,7 +364,6 @@ for frame in range(start_frame, end_frame + 1):
                 continue
 
             current_height = location.z
-            needs_high_res = False
 
             # Convert location to world coordinates for boundary check
             location_world = target_object.matrix_world @ location
@@ -333,34 +374,38 @@ for frame in range(start_frame, end_frame + 1):
             # FR-16: Check if sample is in the highest 1%
             is_top_1_percent = current_height >= height_threshold_top_1_percent
 
-            # FR-21: Skip this sample if outside boundary (will be handled by low-res sampling)
-            # But still process samples at boundary intersections to maintain coverage
-            if not in_high_res_boundary and not is_top_1_percent:
-                # Check if this position aligns with the lower resolution grid (double step size)
-                if x % 2 != 0 or y % 2 != 0:
-                    continue  # Skip this sample for now, will be handled by lower-res logic
+            # FR-31: Determine resolution based on normal steepness
+            # cos(angle_from_vertical) = abs(normal.z)
+            normal_z_abs = abs(normals.z)
 
-            # Only apply height difference checking within high resolution boundary (FR-11)
-            if in_high_res_boundary:
-                # Check height difference with previous sample in X axis (FR-9)
-                if x > 0:
-                    prev_height = all_raycasts[x - 1][y]['location'].z
-                    if abs(current_height - prev_height) > max_height_difference:
-                        needs_high_res = True
+            # Determine required resolution based on normal steepness
+            if normal_z_abs >= low_res_threshold:
+                # Nearly flat surface - low resolution
+                required_resolution = 'low'  # 2x step
+            elif normal_z_abs >= medium_res_threshold:
+                # Moderate slope - medium resolution
+                required_resolution = 'medium'  # 1x step
+            else:
+                # Steep slope - high resolution
+                required_resolution = 'high'  # 0.5x step
 
-                # Check height difference with next sample in X axis (FR-9)
-                if not needs_high_res and x < int(x_length / step) - 1:
-                    next_height = all_raycasts[x + 1][y]['location'].z
-                    if abs(current_height - next_height) > max_height_difference:
-                        needs_high_res = True
+            # FR-11: Within high resolution boundary, always use at least medium resolution
+            if in_high_res_boundary and required_resolution == 'low':
+                required_resolution = 'medium'
 
-            # FR-16: Also use high resolution for highest 1% of samples
+            # FR-16: Highest 1% always use high resolution
             if is_top_1_percent:
-                needs_high_res = True
+                required_resolution = 'high'
 
-            # Determine the current step size based on location and conditions
-            # FR-12 & FR-15: Resample with half step size for high-difference areas
-            if needs_high_res:
+            # Check if this sample aligns with the current grid position
+            if required_resolution == 'low':
+                # Low res: only sample every other grid point
+                if x % 2 != 0 or y % 2 != 0:
+                    continue
+
+            # Determine the current step size based on required resolution
+            # FR-31: Resolution determined by normal steepness
+            if required_resolution == 'high':
                 # Sample with half step in both x and y directions
                 # FR-15: Center the high-res grid so blocks align perfectly with low-res grid
                 half_step = step / 2
@@ -404,11 +449,11 @@ for frame in range(start_frame, end_frame + 1):
                             total_samples_written += 1
                 total_samples_skipped += 1  # Count original sample as skipped
             else:
-                # Determine step scale based on location
-                # FR-21 & FR-22: Lower resolution outside boundary
-                if not in_high_res_boundary and not is_top_1_percent:
-                    current_step_scale = 2.0  # Double step size outside boundary
-                else:
+                # Medium or low resolution - sample at current grid position
+                # FR-31: Resolution determined by normal steepness
+                if required_resolution == 'low':
+                    current_step_scale = 2.0  # Double step size for low resolution
+                else:  # medium resolution
                     current_step_scale = 1.0  # Normal step size
 
                 # FR-30: Check if sample is too perpendicular to ray direction
@@ -436,11 +481,19 @@ for frame in range(start_frame, end_frame + 1):
                 frame_data["Scales"].append(combined_scale)
                 total_samples_written += 1
 
-    frames_data.append(frame_data)
+    # FR-32: Append frame data for each direction
+    for direction in ['vertical', 'x', '-x', 'y', '-y']:
+        frames_data_by_direction[direction].append(frame_data_by_direction[direction])
     print(f"Processed frame {frame}")
-output_filepath = os.path.join(output_directory, output_filename)
-with open(output_filepath, "w") as file:
-    json.dump(frames_data, file, indent=2)
+
+# FR-32: Write separate output files for each direction
+for direction in ['vertical', 'x', '-x', 'y', '-y']:
+    # Create filename based on direction
+    direction_filename = f"ocean-points-data-{direction}.json"
+    output_filepath = os.path.join(output_directory, direction_filename)
+    with open(output_filepath, "w") as file:
+        json.dump(frames_data_by_direction[direction], file, indent=2)
+    print(f"Written {len(frames_data_by_direction[direction])} frames to {direction_filename}")
 
 # Print statistics (FR-10)
 total_samples = total_samples_written + total_samples_skipped

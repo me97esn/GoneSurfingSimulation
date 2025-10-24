@@ -105,3 +105,14 @@ This should create a script that can be run in blender, that exports all of the 
   - Applied to all sampling types: steep horizontal rays (x, -x, y, -y) and all vertical rays (high-res, normal, low-res)
   - This prevents samples with excessively large scales caused by near-perpendicular surfaces
   - With min_cos_trace = 0.25, maximum normal_scale is limited to 4.0 before max_scale clamp is applied
+- FR-31 implemented: Resolution selection now based on surface normal steepness (replaces height difference checking)
+  - Removed height difference checking logic (FR-9, FR-12)
+  - Added configurable thresholds: `low_res_threshold` = 0.95, `medium_res_threshold` = 0.7
+  - Resolution determined by `abs(normal.z)`: flat surfaces (>0.95) use low resolution (2x step), moderate slopes (0.7-0.95) use medium resolution (1x step), steep slopes (<0.7) use high resolution (0.5x step)
+  - FR-11, FR-16, FR-18 still apply: high resolution boundary enforces at least medium resolution, top 1% uses high resolution, steep normals handled by sideways ray casting
+  - Each sample's resolution is determined independently based only on its own normal
+- FR-32 implemented: Results split into separate files per ray direction
+  - Data structure changed to `frame_data_by_direction` with separate tracking for each direction: 'vertical', 'x', '-x', 'y', '-y'
+  - Each ray direction writes to its own file: `ocean-points-data-vertical.json`, `ocean-points-data-x.json`, `ocean-points-data--x.json`, `ocean-points-data-y.json`, `ocean-points-data--y.json`
+  - Allows independent processing and analysis of samples from different ray directions
+  - Vertical rays capture the main surface, horizontal rays capture steep features from multiple angles

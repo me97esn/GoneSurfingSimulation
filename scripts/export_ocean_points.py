@@ -26,6 +26,10 @@ steep_ray_directions = ['x', '-x', 'y', '-y']  # Configurable list of directions
 # Maximum scale limit for all samples (FR-17, FR-20)
 max_scale = 4
 
+# Minimum cosine between normal and ray direction to avoid near-perpendicular samples (FR-30)
+# Samples with cos < this value will be skipped to prevent excessively large scales
+min_cos_trace = 0.25  # ~75 degrees from perpendicular, limits scale to 4.0 before max_scale clamp
+
 # Array to store all frames
 frames_data = []
 
@@ -133,6 +137,11 @@ for frame in range(start_frame, end_frame + 1):
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
+                        # FR-30: Skip samples too perpendicular to ray direction
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        if cos_trace < min_cos_trace:
+                            continue  # Skip this sample
+
                         frame_data["Positions"].append({
                             "X": float(location.x),
                             "Y": float(location.y),
@@ -145,7 +154,6 @@ for frame in range(start_frame, end_frame + 1):
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
-                        cos_trace = abs(normals.dot(ray_direction_vec))
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
@@ -177,6 +185,11 @@ for frame in range(start_frame, end_frame + 1):
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
+                        # FR-30: Skip samples too perpendicular to ray direction
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        if cos_trace < min_cos_trace:
+                            continue  # Skip this sample
+
                         frame_data["Positions"].append({
                             "X": float(location.x),
                             "Y": float(location.y),
@@ -189,7 +202,6 @@ for frame in range(start_frame, end_frame + 1):
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
-                        cos_trace = abs(normals.dot(ray_direction_vec))
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
@@ -221,6 +233,11 @@ for frame in range(start_frame, end_frame + 1):
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
+                        # FR-30: Skip samples too perpendicular to ray direction
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        if cos_trace < min_cos_trace:
+                            continue  # Skip this sample
+
                         frame_data["Positions"].append({
                             "X": float(location.x),
                             "Y": float(location.y),
@@ -233,7 +250,6 @@ for frame in range(start_frame, end_frame + 1):
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
-                        cos_trace = abs(normals.dot(ray_direction_vec))
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
@@ -265,6 +281,11 @@ for frame in range(start_frame, end_frame + 1):
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
+                        # FR-30: Skip samples too perpendicular to ray direction
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        if cos_trace < min_cos_trace:
+                            continue  # Skip this sample
+
                         frame_data["Positions"].append({
                             "X": float(location.x),
                             "Y": float(location.y),
@@ -277,7 +298,6 @@ for frame in range(start_frame, end_frame + 1):
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
-                        cos_trace = abs(normals.dot(ray_direction_vec))
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
@@ -358,6 +378,11 @@ for frame in range(start_frame, end_frame + 1):
 
                         if hit:
                             norm.normalize()
+                            # FR-30: Skip samples too perpendicular to ray direction
+                            cos_trace = abs(norm.dot(ray_direction))
+                            if cos_trace < min_cos_trace:
+                                continue  # Skip this sample
+
                             frame_data["Positions"].append({
                                 "X": float(loc.x),
                                 "Y": float(loc.y),
@@ -370,7 +395,6 @@ for frame in range(start_frame, end_frame + 1):
                             })
                             # FR-13, FR-14, FR-29: Store step size scale multiplied by normal-based scale
                             # Use cos between normal and trace direction
-                            cos_trace = abs(norm.dot(ray_direction))
                             normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                             step_scale = 0.5  # half_step / step
                             combined_scale = step_scale * normal_scale
@@ -387,6 +411,13 @@ for frame in range(start_frame, end_frame + 1):
                 else:
                     current_step_scale = 1.0  # Normal step size
 
+                # FR-30: Check if sample is too perpendicular to ray direction
+                # Use cos between normal and trace direction (downward for vertical rays)
+                vertical_ray_direction = Vector((0, 0, -1))
+                cos_trace = abs(normals.dot(vertical_ray_direction))
+                if cos_trace < min_cos_trace:
+                    continue  # Skip this sample
+
                 # Add the sample with appropriate step size
                 frame_data["Positions"].append({
                     "X": float(location.x),
@@ -399,12 +430,8 @@ for frame in range(start_frame, end_frame + 1):
                     "Z": float(normals.z)
                 })
                 # FR-13, FR-14, FR-22, FR-29: Store step size scale multiplied by normal-based scale
-                # Use cos between normal and trace direction (downward for vertical rays)
-                vertical_ray_direction = Vector((0, 0, -1))
-                cos_trace = abs(normals.dot(vertical_ray_direction))
                 normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                 combined_scale = current_step_scale * normal_scale
-                # FR-17: Limit scale to maximum of 3.0
                 combined_scale = min(combined_scale, max_scale)
                 frame_data["Scales"].append(combined_scale)
                 total_samples_written += 1

@@ -21,7 +21,7 @@ This should create a script that can be run in blender, that exports all of the 
 7. **FR-7**: Make sure that the python file is correctly indented and compiles
 8. **FR-8**: The script should add another array of floats, for scale. The scale should be calculated using the direction of the normal for this sample.
 9. **FR-9**: If the height difference between this raycast and the previous raycast in the X Axis is above a configurable value, this raycast should be skipped. Neither its position, normal nor scale should be stored. Same thing if the height difference compared to the next raycast in the same axis, the results of this raycast should be skipped.
-10. **FR-10**: At the end of the script: print how many samples have been written, how many was skipped and the percentage of skipped raycasts.
+10. **FR-10**: At the end of the script: print how many samples have been written in total, and how many per resolution was written.
 11. **FR-11**: I have added a mesh named 'High_resolution_boundary' to the blender file. Only samples within the boundaries of this mesh should be handled in the **FR-9** requirement.
 12. **FR-12**: The samples identified in **FR-9** and **FR-11** should no longer be skipped. Quite the opposite: these samples should be run with half the step size as the other samples, resulting in more samples with shorter distance between.
 13. **FR-13**: Since I now use varying step size for the sampling, this has to be stored in the result as well. Write this into the frame_date["Scales"], with value for each sample being size of this step divided by the original size of the step. Example: step=5, currentStep=5, scale=1
@@ -41,6 +41,7 @@ This should create a script that can be run in blender, that exports all of the 
 27. **FR-27**: the high resolution grid, low resolution grid and lower resolution grid should all align.
 28. **FR-28**: The steeper sampling should only use high resolution sampling, but only include those hits with normal steeper then in **FR-18**.
 29. **FR-29**: All sampling (steep and vertical) should NOT use cos between normal and z axis when calculating scale, since this makes the scale way too big for steep samples. Instead, all samples should use cos between the normal and the trace direction when calculating scale. For vertical rays, the trace direction is downward (0, 0, -1). For horizontal rays (steep sampling), the trace direction is the actual ray direction (x, -x, y, or -y).
+30. **FR-30**: Samples where the surface normal is too perpendicular to the ray direction should be skipped to avoid excessively large scales. Add a configurable threshold `min_cos_trace` (minimum cosine between normal and trace direction). If `abs(normal.dot(ray_direction)) < min_cos_trace`, the sample should be skipped. This applies to all sampling types (vertical, horizontal steep sampling). A suggested default value is 0.25 (corresponding to ~75 degrees from perpendicular, or ~15 degrees from parallel), which would prevent scales from exceeding 4.0 even before the max_scale clamp is applied.
 
 ### Non-Functional Requirements
 
@@ -96,3 +97,9 @@ This should create a script that can be run in blender, that exports all of the 
   - Vertical sampling (high-res): Uses cos between normal and ray_direction (downward)
   - Vertical sampling (low/lower-res): Uses cos between normal and vertical_ray_direction (0, 0, -1)
   - This prevents excessively large scales for steep samples by using the actual trace direction instead of z-axis
+- FR-30 implemented: Samples too perpendicular to ray direction are now skipped
+  - Added configurable threshold `min_cos_trace` = 0.25 (default)
+  - Samples with `abs(normal.dot(ray_direction)) < min_cos_trace` are skipped
+  - Applied to all sampling types: steep horizontal rays (x, -x, y, -y) and all vertical rays (high-res, normal, low-res)
+  - This prevents samples with excessively large scales caused by near-perpendicular surfaces
+  - With min_cos_trace = 0.25, maximum normal_scale is limited to 4.0 before max_scale clamp is applied

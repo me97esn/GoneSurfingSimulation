@@ -143,10 +143,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals.y),
                             "Z": float(normals.z)
                         })
-                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
-                        z_axis = Vector((0, 0, 1))
-                        cos_z = normals.dot(z_axis)
-                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
+                        # Use cos between normal and trace direction (not z-axis)
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
@@ -187,10 +187,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals.y),
                             "Z": float(normals.z)
                         })
-                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
-                        z_axis = Vector((0, 0, 1))
-                        cos_z = normals.dot(z_axis)
-                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
+                        # Use cos between normal and trace direction (not z-axis)
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
@@ -231,10 +231,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals.y),
                             "Z": float(normals.z)
                         })
-                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
-                        z_axis = Vector((0, 0, 1))
-                        cos_z = normals.dot(z_axis)
-                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
+                        # Use cos between normal and trace direction (not z-axis)
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
@@ -275,10 +275,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals.y),
                             "Z": float(normals.z)
                         })
-                        # FR-19, FR-20, FR-28: Calculate scale for steep samples
-                        z_axis = Vector((0, 0, 1))
-                        cos_z = normals.dot(z_axis)
-                        normal_scale = 1 / float(abs(cos_z)) if cos_z != 0 else max_scale
+                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
+                        # Use cos between normal and trace direction (not z-axis)
+                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
@@ -368,10 +368,10 @@ for frame in range(start_frame, end_frame + 1):
                                 "Y": float(norm.y),
                                 "Z": float(norm.z)
                             })
-                            # FR-13 & FR-14: Store step size scale multiplied by normal-based scale
-                            z_axis = Vector((0, 0, 1))
-                            cos_z = norm.dot(z_axis)
-                            normal_scale = 1 / float(cos_z) if cos_z != 0 else max_scale
+                            # FR-13, FR-14, FR-29: Store step size scale multiplied by normal-based scale
+                            # Use cos between normal and trace direction
+                            cos_trace = abs(norm.dot(ray_direction))
+                            normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                             step_scale = 0.5  # half_step / step
                             combined_scale = step_scale * normal_scale
                             # FR-17: Limit scale to maximum of 3.0
@@ -398,10 +398,11 @@ for frame in range(start_frame, end_frame + 1):
                     "Y": float(normals.y),
                     "Z": float(normals.z)
                 })
-                # FR-13, FR-14, FR-22: Store step size scale multiplied by normal-based scale
-                z_axis = Vector((0, 0, 1))
-                cos_z = normals.dot(z_axis)
-                normal_scale = 1 / float(cos_z) if cos_z != 0 else max_scale
+                # FR-13, FR-14, FR-22, FR-29: Store step size scale multiplied by normal-based scale
+                # Use cos between normal and trace direction (downward for vertical rays)
+                vertical_ray_direction = Vector((0, 0, -1))
+                cos_trace = abs(normals.dot(vertical_ray_direction))
+                normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                 combined_scale = current_step_scale * normal_scale
                 # FR-17: Limit scale to maximum of 3.0
                 combined_scale = min(combined_scale, max_scale)

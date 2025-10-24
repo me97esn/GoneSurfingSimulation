@@ -40,7 +40,7 @@ This should create a script that can be run in blender, that exports all of the 
 26. **FR-26**: The steeper sampling should be configurable to perform tracing from 4 directions: -x, x, -y, y.
 27. **FR-27**: the high resolution grid, low resolution grid and lower resolution grid should all align.
 28. **FR-28**: The steeper sampling should only use high resolution sampling, but only include those hits with normal steeper then in **FR-18**.
-29. **FR-29**: The steeper sampling should NOT use cos between normal and z axis when calculating scale, since this makes the scale way too big. Instead it should use cos between the normal and the trace direction when calculating scale.
+29. **FR-29**: All sampling (steep and vertical) should NOT use cos between normal and z axis when calculating scale, since this makes the scale way too big for steep samples. Instead, all samples should use cos between the normal and the trace direction when calculating scale. For vertical rays, the trace direction is downward (0, 0, -1). For horizontal rays (steep sampling), the trace direction is the actual ray direction (x, -x, y, or -y).
 
 ### Non-Functional Requirements
 
@@ -91,3 +91,8 @@ This should create a script that can be run in blender, that exports all of the 
   - Removed conditional step sizing for steep samples
   - All steep normal samples now use step/2 (high resolution) regardless of location
   - Step scale is always 0.5 for steep samples
+- FR-29 implemented: All scale calculations now use cos between normal and trace direction
+  - Steep horizontal sampling: Uses cos between normal and ray_direction_vec (x or y direction)
+  - Vertical sampling (high-res): Uses cos between normal and ray_direction (downward)
+  - Vertical sampling (low/lower-res): Uses cos between normal and vertical_ray_direction (0, 0, -1)
+  - This prevents excessively large scales for steep samples by using the actual trace direction instead of z-axis

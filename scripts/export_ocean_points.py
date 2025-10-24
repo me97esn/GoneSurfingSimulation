@@ -28,7 +28,7 @@ max_scale = 4
 
 # Minimum cosine between normal and ray direction to avoid near-perpendicular samples (FR-30)
 # Samples with cos < this value will be skipped to prevent excessively large scales
-min_cos_trace = 0.25  # ~75 degrees from perpendicular, limits scale to 4.0 before max_scale clamp
+min_cos_trace = 0.6  # 50 degrees from perpendicular, limits scale to 4.0 before max_scale clamp
 
 # Array to store all frames
 frames_data = []

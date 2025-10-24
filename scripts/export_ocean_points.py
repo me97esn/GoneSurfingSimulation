@@ -23,7 +23,7 @@ medium_res_threshold = 0.7  # Moderate slope (< ~45 degrees) - use medium resolu
 # Steeper than medium_res_threshold - use high resolution (0.5x step)
 
 # Steep normal threshold for sideways ray casting (FR-18)
-steep_normal_threshold = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
+steep_normal_threshold = 0.866  # cos(30 degrees) - angles steeper than 30 degrees from vertical
 # Sideways ray casting directions (FR-26): can include '-x', 'x', '-y', 'y'
 steep_ray_directions = ['x', '-x', 'y', '-y']  # Configurable list of directions
 

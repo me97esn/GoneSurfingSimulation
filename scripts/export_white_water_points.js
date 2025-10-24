@@ -8,6 +8,22 @@ const dir = "/hdd/gone_surfing_exports/medium_wave_left/white_water";
 const startFrame = 752;
 const frames = [];
 
+// FR-7: Configurable Z-axis rotation (in degrees, clockwise)
+const rotationDegrees = 90; // Default: 90 degrees clockwise
+const rotationRadians = (rotationDegrees * Math.PI) / 180;
+
+// Rotation matrix for Z-axis (clockwise rotation)
+function rotateAroundZ(x, y, z, angle) {
+  // Clockwise rotation: x' = x*cos(θ) + y*sin(θ), y' = -x*sin(θ) + y*cos(θ)
+  const cosAngle = Math.cos(angle);
+  const sinAngle = Math.sin(angle);
+  return {
+    x: x * cosAngle + y * sinAngle,
+    y: -x * sinAngle + y * cosAngle,
+    z: z
+  };
+}
+
 // Get command line arguments
 const [, , resultFileURI] = process.argv;
 
@@ -43,10 +59,12 @@ for (const fileName of files) {
       // Check if line contains vertex data (starts with "v ")
       if (line.match(/^v /)) {
         const [, x, y, z] = line.split(" ");
+        // FR-7: Apply Z-axis rotation
+        const rotated = rotateAroundZ(parseFloat(x), parseFloat(y), parseFloat(z), rotationRadians);
         positions.push({
-          X: parseFloat(x),
-          Y: parseFloat(y),
-          Z: parseFloat(z)
+          X: rotated.x,
+          Y: rotated.y,
+          Z: rotated.z
         });
       }
     }

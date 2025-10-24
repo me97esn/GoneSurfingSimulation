@@ -198,14 +198,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals_world.y),
                             "Z": float(normals_world.z)
                         })
-                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
-                        # Use cos between normal and trace direction (not z-axis)
-                        # cos_trace already calculated above using normals_world
-                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+                        # FR-28: Calculate scale for steep samples - use only step_scale, ignore normal angle
+                        # All steep samples use the same scale regardless of surface angle
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
-                        combined_scale = step_scale * normal_scale
-                        combined_scale = min(combined_scale, max_scale)  # FR-20
-                        frame_data["Scales"].append(combined_scale)
+                        frame_data["Scales"].append(step_scale)
                         total_samples_written += 1
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
@@ -253,14 +249,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals_world.y),
                             "Z": float(normals_world.z)
                         })
-                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
-                        # Use cos between normal and trace direction (not z-axis)
-                        # cos_trace already calculated above using normals_world
-                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+                        # FR-28: Calculate scale for steep samples - use only step_scale, ignore normal angle
+                        # All steep samples use the same scale regardless of surface angle
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
-                        combined_scale = step_scale * normal_scale
-                        combined_scale = min(combined_scale, max_scale)  # FR-20
-                        frame_data["Scales"].append(combined_scale)
+                        frame_data["Scales"].append(step_scale)
                         total_samples_written += 1
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
@@ -308,14 +300,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals_world.y),
                             "Z": float(normals_world.z)
                         })
-                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
-                        # Use cos between normal and trace direction (not z-axis)
-                        # cos_trace already calculated above using normals_world
-                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+                        # FR-28: Calculate scale for steep samples - use only step_scale, ignore normal angle
+                        # All steep samples use the same scale regardless of surface angle
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
-                        combined_scale = step_scale * normal_scale
-                        combined_scale = min(combined_scale, max_scale)  # FR-20
-                        frame_data["Scales"].append(combined_scale)
+                        frame_data["Scales"].append(step_scale)
                         total_samples_written += 1
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
@@ -363,14 +351,10 @@ for frame in range(start_frame, end_frame + 1):
                             "Y": float(normals_world.y),
                             "Z": float(normals_world.z)
                         })
-                        # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
-                        # Use cos between normal and trace direction (not z-axis)
-                        # cos_trace already calculated above using normals_world
-                        normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+                        # FR-28: Calculate scale for steep samples - use only step_scale, ignore normal angle
+                        # All steep samples use the same scale regardless of surface angle
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
-                        combined_scale = step_scale * normal_scale
-                        combined_scale = min(combined_scale, max_scale)  # FR-20
-                        frame_data["Scales"].append(combined_scale)
+                        frame_data["Scales"].append(step_scale)
                         total_samples_written += 1
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 

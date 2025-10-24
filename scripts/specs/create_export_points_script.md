@@ -44,7 +44,7 @@ This should create a script that can be run in blender, that exports all of the 
 30. **FR-30**: Samples where the surface normal is too perpendicular to the ray direction should be skipped to avoid excessively large scales. Add a configurable threshold `min_cos_trace` (minimum cosine between normal and trace direction). If `abs(normal.dot(ray_direction)) < min_cos_trace`, the sample should be skipped. This applies to all sampling types (vertical, horizontal steep sampling). A suggested default value is 0.25 (corresponding to ~75 degrees from perpendicular, or ~15 degrees from parallel), which would prevent scales from exceeding 4.0 even before the max_scale clamp is applied.
 31. **FR-31**: The script should no longer use difference in height from **FR-9**, since this misses some samples with high volatility. It should instead look at the normal of the current sample only. If the normal of the current sample is steep enough, higher resolution should be used. Close to no slope: low resolution. Moderate slope: medium resolution. Steep slope: high resolution. Note that only the current sample is of interest for this, the next or previous sample can be ignored when deciding resolution. **FR-18**, **FR-16**, **FR-11** should still apply.
 32. **FR-32**: The script should split the results into separate files, one for each direction of the ray cast.
-
+33. **FR-33**: The steep sampling hits should only be included if they are within the boundary from **FR-11**.
 ### Non-Functional Requirements
 
 1. **NFR-1**: The implementation shall be simple and readable
@@ -95,6 +95,8 @@ This should create a script that can be run in blender, that exports all of the 
   - Removed conditional step sizing for steep samples
   - All steep normal samples now use step/2 (high resolution) regardless of location
   - Step scale is always 0.5 for steep samples
+  - Scale does NOT include normal angle correction for steep samples - all steep samples use scale = 0.5
+  - This differs from FR-19 - steep samples ignore normal_scale to maintain consistent scale values
 - FR-29 implemented: All scale calculations now use cos between normal and trace direction
   - Steep horizontal sampling: Uses cos between normal and ray_direction_vec (x or y direction)
   - Vertical sampling (high-res): Uses cos between normal and ray_direction (downward)

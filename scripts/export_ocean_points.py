@@ -162,9 +162,11 @@ for frame in range(start_frame, end_frame + 1):
         if direction == 'x':
             # Ray casting in +X direction (left to right)
             frame_data = frame_data_by_direction['x']  # FR-32: Use direction-specific data
-            for y in range(int(y_length / step)):
+            # FR-28: Use high resolution for steep sampling (step/2)
+            high_res_step = step / 2
+            for y in range(int(y_length / high_res_step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
-                    ray_y = start_trace_y + step * y
+                    ray_y = start_trace_y + high_res_step * y
                     ray_begin = Vector((-60, ray_y, z_pos))
                     ray_end = Vector((100, ray_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
@@ -208,16 +210,18 @@ for frame in range(start_frame, end_frame + 1):
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
-                        grid_x = int((location.x - start_trace_x) / step)
-                        grid_y = int((location.y - start_trace_y) / step)
+                        grid_x = int((location_world.x - start_trace_x) / step)
+                        grid_y = int((location_world.y - start_trace_y) / step)
                         steep_samples_processed.add((grid_x, grid_y))
 
         elif direction == '-x':
             # Ray casting in -X direction (right to left)
             frame_data = frame_data_by_direction['-x']  # FR-32: Use direction-specific data
-            for y in range(int(y_length / step)):
+            # FR-28: Use high resolution for steep sampling (step/2)
+            high_res_step = step / 2
+            for y in range(int(y_length / high_res_step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
-                    ray_y = start_trace_y + step * y
+                    ray_y = start_trace_y + high_res_step * y
                     ray_begin = Vector((100, ray_y, z_pos))
                     ray_end = Vector((-60, ray_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
@@ -261,16 +265,18 @@ for frame in range(start_frame, end_frame + 1):
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
-                        grid_x = int((location.x - start_trace_x) / step)
-                        grid_y = int((location.y - start_trace_y) / step)
+                        grid_x = int((location_world.x - start_trace_x) / step)
+                        grid_y = int((location_world.y - start_trace_y) / step)
                         steep_samples_processed.add((grid_x, grid_y))
 
         elif direction == 'y':
             # Ray casting in +Y direction (back to front)
             frame_data = frame_data_by_direction['y']  # FR-32: Use direction-specific data
-            for x in range(int(x_length / step)):
+            # FR-28: Use high resolution for steep sampling (step/2)
+            high_res_step = step / 2
+            for x in range(int(x_length / high_res_step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
-                    ray_x = start_trace_x + step * x
+                    ray_x = start_trace_x + high_res_step * x
                     ray_begin = Vector((ray_x, -280, z_pos))
                     ray_end = Vector((ray_x, 170, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
@@ -314,16 +320,18 @@ for frame in range(start_frame, end_frame + 1):
                         samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
-                        grid_x = int((location.x - start_trace_x) / step)
-                        grid_y = int((location.y - start_trace_y) / step)
+                        grid_x = int((location_world.x - start_trace_x) / step)
+                        grid_y = int((location_world.y - start_trace_y) / step)
                         steep_samples_processed.add((grid_x, grid_y))
 
         elif direction == '-y':
             # Ray casting in -Y direction (front to back)
             frame_data = frame_data_by_direction['-y']  # FR-32: Use direction-specific data
-            for x in range(int(x_length / step)):
+            # FR-28: Use high resolution for steep sampling (step/2)
+            high_res_step = step / 2
+            for x in range(int(x_length / high_res_step)):
                 for z_pos in range(-5, 105, 1):  # Scan through height range
-                    ray_x = start_trace_x + step * x
+                    ray_x = start_trace_x + high_res_step * x
                     ray_begin = Vector((ray_x, 170, z_pos))
                     ray_end = Vector((ray_x, -280, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin

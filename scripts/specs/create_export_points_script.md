@@ -44,6 +44,8 @@ This should create a script that can be run in blender, that exports all of the 
 30. **FR-30**: Samples where the surface normal is too perpendicular to the ray direction should be skipped to avoid excessively large scales. Add a configurable threshold `min_cos_trace` (minimum cosine between normal and trace direction). If `abs(normal.dot(ray_direction)) < min_cos_trace`, the sample should be skipped. This applies to all sampling types (vertical, horizontal steep sampling). A suggested default value is 0.25 (corresponding to ~75 degrees from perpendicular, or ~15 degrees from parallel), which would prevent scales from exceeding 4.0 even before the max_scale clamp is applied.
 31. **FR-31**: The script should no longer use difference in height from **FR-9**, since this misses some samples with high volatility. It should instead look at the normal of the current sample only. If the normal of the current sample is steep enough, higher resolution should be used. Close to no slope: low resolution. Moderate slope: medium resolution. Steep slope: high resolution. Note that only the current sample is of interest for this, the next or previous sample can be ignored when deciding resolution. **FR-18**, **FR-16**, **FR-11** should still apply.
 32. **FR-32**: The script should split the results into separate files, one for each direction of the ray cast.
+33. **FR-33**: The highest 1% of the samples in **FR-16** should use even higher resolution.
+34. **FR-34**: There are some gaps when the low resolution meet medium resolution. If this is because of a bug it should be fixed, otherwise an extra row of medium resolution samples can be added in these areas to minimize the risk of gaps.
 
 ### Non-Functional Requirements
 
@@ -117,3 +119,13 @@ This should create a script that can be run in blender, that exports all of the 
   - Each ray direction writes to its own file: `ocean-points-data-vertical.json`, `ocean-points-data-x.json`, `ocean-points-data--x.json`, `ocean-points-data-y.json`, `ocean-points-data--y.json`
   - Allows independent processing and analysis of samples from different ray directions
   - Vertical rays capture the main surface, horizontal rays capture steep features from multiple angles
+- FR-33 implemented: Highest 1% samples use extra-high resolution
+  - Top 1% samples now use `extra_high` resolution level instead of just `high`
+  - Extra-high resolution uses step/4 spacing (16 samples per grid cell)
+  - Step scale is 0.25 for extra-high resolution samples
+  - Provides even denser sampling at wave peaks and critical areas
+- FR-34 implemented: Boundary samples prevent gaps between resolution levels
+  - Added neighbor checking to detect resolution boundaries
+  - When low-resolution cell is adjacent to medium/high/extra-high resolution cell, it upgrades to medium resolution
+  - This creates a transition zone that prevents gaps at resolution boundaries
+  - Ensures continuous coverage across the entire surface

@@ -421,19 +421,104 @@ for frame in range(start_frame, end_frame + 1):
             if in_high_res_boundary and required_resolution == 'low':
                 required_resolution = 'medium'
 
-            # FR-16: Highest 1% always use high resolution
+            # FR-16, FR-33: Highest 1% use extra-high resolution
             if is_top_1_percent:
-                required_resolution = 'high'
+                required_resolution = 'extra_high'
+
+            # FR-34: Check if we need boundary samples to prevent gaps
+            # Check neighbors to see if there's a resolution change
+            needs_boundary_sample = False
+            if required_resolution == 'low':
+                # Check if any neighbors use higher resolution
+                for nx in [max(0, x-1), min(int(x_length/step)-1, x+1)]:
+                    for ny in [max(0, y-1), min(int(y_length/step)-1, y+1)]:
+                        if nx == x and ny == y:
+                            continue
+                        neighbor_raycast = all_raycasts[nx][ny]
+                        neighbor_normals = neighbor_raycast['normals']
+                        if is_steep_normal(neighbor_normals):
+                            continue
+                        neighbor_height = neighbor_raycast['location'].z
+                        neighbor_world = target_object.matrix_world @ neighbor_raycast['location']
+                        neighbor_in_boundary = is_point_in_boundary(neighbor_world)
+                        neighbor_is_top = neighbor_height >= height_threshold_top_1_percent
+                        neighbor_z_abs = abs(neighbor_normals.z)
+
+                        # Determine neighbor resolution
+                        if neighbor_z_abs >= low_res_threshold:
+                            neighbor_res = 'low'
+                        elif neighbor_z_abs >= medium_res_threshold:
+                            neighbor_res = 'medium'
+                        else:
+                            neighbor_res = 'high'
+
+                        if neighbor_in_boundary and neighbor_res == 'low':
+                            neighbor_res = 'medium'
+                        if neighbor_is_top:
+                            neighbor_res = 'extra_high'
+
+                        # If neighbor uses higher resolution, we need boundary samples
+                        if neighbor_res != 'low':
+                            needs_boundary_sample = True
+                            break
+                    if needs_boundary_sample:
+                        break
 
             # Check if this sample aligns with the current grid position
-            if required_resolution == 'low':
+            if required_resolution == 'low' and not needs_boundary_sample:
                 # Low res: only sample every other grid point
                 if x % 2 != 0 or y % 2 != 0:
                     continue
+            elif required_resolution == 'low' and needs_boundary_sample:
+                # FR-34: Use medium resolution at boundaries to prevent gaps
+                required_resolution = 'medium'
 
             # Determine the current step size based on required resolution
-            # FR-31: Resolution determined by normal steepness
-            if required_resolution == 'high':
+            # FR-31, FR-33: Resolution determined by normal steepness or top 1%
+            if required_resolution == 'extra_high':
+                # FR-33: Extra high resolution for top 1% - even denser sampling
+                # Sample at step/4 resolution (16 samples per grid cell)
+                extra_high_step = step / 4
+                eighth_step = step / 8
+                for dx in [-3*eighth_step, -eighth_step, eighth_step, 3*eighth_step]:
+                    for dy in [-3*eighth_step, -eighth_step, eighth_step, 3*eighth_step]:
+                        ray_x = start_trace_x + step * x + dx
+                        ray_y = start_trace_y + step * y + dy
+                        ray_begin = Vector((ray_x, ray_y, 100))
+                        ray_end = Vector((ray_x, ray_y, -100))
+                        ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+                        ray_direction = ray_end - ray_begin
+                        ray_direction.normalize()
+                        hit, loc, norm, index = target_object.ray_cast(ray_begin_local, ray_direction)
+
+                        if hit:
+                            norm.normalize()
+                            # FR-30: Skip samples too perpendicular to ray direction
+                            cos_trace = abs(norm.dot(ray_direction))
+                            if cos_trace < min_cos_trace:
+                                continue  # Skip this sample
+
+                            frame_data["Positions"].append({
+                                "X": float(loc.x),
+                                "Y": float(loc.y),
+                                "Z": float(loc.z)
+                            })
+                            frame_data["Normals"].append({
+                                "X": float(norm.x),
+                                "Y": float(norm.y),
+                                "Z": float(norm.z)
+                            })
+                            # FR-33: Extra high resolution scale
+                            # Use cos between normal and trace direction
+                            normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+                            step_scale = 0.25  # extra_high_step / step = (step/4) / step = 0.25
+                            combined_scale = step_scale * normal_scale
+                            combined_scale = min(combined_scale, max_scale)
+                            frame_data["Scales"].append(combined_scale)
+                            total_samples_written += 1
+                            samples_high_res += 1  # FR-10: Track as high resolution
+                total_samples_skipped += 1  # Count original sample as skipped
+            elif required_resolution == 'high':
                 # Sample with half step in both x and y directions
                 # FR-15: Center the high-res grid so blocks align perfectly with low-res grid
                 half_step = step / 2

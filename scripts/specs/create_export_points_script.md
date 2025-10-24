@@ -77,7 +77,8 @@ This should create a script that can be run in blender, that exports all of the 
 - Implemented two-pass approach: first collects all raycasts, then filters based on height differences
 - Height difference checking compares each sample with both previous and next samples in X axis
 - Added statistics tracking and reporting (FR-10):
-  - Samples written count
+  - Total samples written count
+  - Samples per resolution: low (2x step), medium (1x step), high (0.5x step)
   - Samples skipped count
   - Percentage of skipped samples
 - Scale calculation based on normal direction (FR-8) already implemented

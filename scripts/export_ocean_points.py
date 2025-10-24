@@ -46,6 +46,10 @@ frames_data_by_direction = {
 # Statistics tracking (FR-10)
 total_samples_written = 0
 total_samples_skipped = 0
+# Track samples per resolution
+samples_low_res = 0
+samples_medium_res = 0
+samples_high_res = 0
 
 def is_point_in_boundary(point):
     """Check if a point is within the High_resolution_boundary mesh (FR-11)"""
@@ -171,33 +175,37 @@ for frame in range(start_frame, end_frame + 1):
                     if hit and is_steep_normal(normals):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
+                        # Transform normal to world space
+                        normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
                         # FR-30: Skip samples too perpendicular to ray direction
-                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue  # Skip this sample
 
                         frame_data["Positions"].append({
-                            "X": float(location.x),
-                            "Y": float(location.y),
-                            "Z": float(location.z)
+                            "X": float(location_world.x),
+                            "Y": float(location_world.y),
+                            "Z": float(location_world.z)
                         })
                         frame_data["Normals"].append({
-                            "X": float(normals.x),
-                            "Y": float(normals.y),
-                            "Z": float(normals.z)
+                            "X": float(normals_world.x),
+                            "Y": float(normals_world.y),
+                            "Z": float(normals_world.z)
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
+                        # cos_trace already calculated above using normals_world
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
                         grid_x = int((location.x - start_trace_x) / step)
@@ -220,33 +228,37 @@ for frame in range(start_frame, end_frame + 1):
                     if hit and is_steep_normal(normals):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
+                        # Transform normal to world space
+                        normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
                         # FR-30: Skip samples too perpendicular to ray direction
-                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue  # Skip this sample
 
                         frame_data["Positions"].append({
-                            "X": float(location.x),
-                            "Y": float(location.y),
-                            "Z": float(location.z)
+                            "X": float(location_world.x),
+                            "Y": float(location_world.y),
+                            "Z": float(location_world.z)
                         })
                         frame_data["Normals"].append({
-                            "X": float(normals.x),
-                            "Y": float(normals.y),
-                            "Z": float(normals.z)
+                            "X": float(normals_world.x),
+                            "Y": float(normals_world.y),
+                            "Z": float(normals_world.z)
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
+                        # cos_trace already calculated above using normals_world
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
                         grid_x = int((location.x - start_trace_x) / step)
@@ -269,33 +281,37 @@ for frame in range(start_frame, end_frame + 1):
                     if hit and is_steep_normal(normals):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
+                        # Transform normal to world space
+                        normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
                         # FR-30: Skip samples too perpendicular to ray direction
-                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue  # Skip this sample
 
                         frame_data["Positions"].append({
-                            "X": float(location.x),
-                            "Y": float(location.y),
-                            "Z": float(location.z)
+                            "X": float(location_world.x),
+                            "Y": float(location_world.y),
+                            "Z": float(location_world.z)
                         })
                         frame_data["Normals"].append({
-                            "X": float(normals.x),
-                            "Y": float(normals.y),
-                            "Z": float(normals.z)
+                            "X": float(normals_world.x),
+                            "Y": float(normals_world.y),
+                            "Z": float(normals_world.z)
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
+                        # cos_trace already calculated above using normals_world
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
                         grid_x = int((location.x - start_trace_x) / step)
@@ -318,33 +334,37 @@ for frame in range(start_frame, end_frame + 1):
                     if hit and is_steep_normal(normals):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
+                        # Transform normal to world space
+                        normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
                         # FR-28: Steep sampling always uses high resolution (step/2)
                         current_step = step / 2
 
                         # FR-30: Skip samples too perpendicular to ray direction
-                        cos_trace = abs(normals.dot(ray_direction_vec))
+                        cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue  # Skip this sample
 
                         frame_data["Positions"].append({
-                            "X": float(location.x),
-                            "Y": float(location.y),
-                            "Z": float(location.z)
+                            "X": float(location_world.x),
+                            "Y": float(location_world.y),
+                            "Z": float(location_world.z)
                         })
                         frame_data["Normals"].append({
-                            "X": float(normals.x),
-                            "Y": float(normals.y),
-                            "Z": float(normals.z)
+                            "X": float(normals_world.x),
+                            "Y": float(normals_world.y),
+                            "Z": float(normals_world.z)
                         })
                         # FR-19, FR-20, FR-28, FR-29: Calculate scale for steep samples
                         # Use cos between normal and trace direction (not z-axis)
+                        # cos_trace already calculated above using normals_world
                         normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
                         step_scale = 0.5  # Always high-res: current_step / step = (step/2) / step = 0.5
                         combined_scale = step_scale * normal_scale
                         combined_scale = min(combined_scale, max_scale)  # FR-20
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        samples_high_res += 1  # FR-10, FR-28: Steep samples always high-res
 
                         # Mark grid position as having steep sample
                         grid_x = int((location.x - start_trace_x) / step)
@@ -447,6 +467,7 @@ for frame in range(start_frame, end_frame + 1):
                             combined_scale = min(combined_scale, max_scale)
                             frame_data["Scales"].append(combined_scale)
                             total_samples_written += 1
+                            samples_high_res += 1  # FR-10: Track high resolution samples
                 total_samples_skipped += 1  # Count original sample as skipped
             else:
                 # Medium or low resolution - sample at current grid position
@@ -480,6 +501,11 @@ for frame in range(start_frame, end_frame + 1):
                 combined_scale = min(combined_scale, max_scale)
                 frame_data["Scales"].append(combined_scale)
                 total_samples_written += 1
+                # FR-10: Track samples by resolution
+                if required_resolution == 'low':
+                    samples_low_res += 1
+                else:  # medium
+                    samples_medium_res += 1
 
     # FR-32: Append frame data for each direction
     for direction in ['vertical', 'x', '-x', 'y', '-y']:
@@ -500,6 +526,9 @@ total_samples = total_samples_written + total_samples_skipped
 skip_percentage = (total_samples_skipped / total_samples * 100) if total_samples > 0 else 0
 
 print("Export completed!")
-print(f"Samples written: {total_samples_written}")
+print(f"Total samples written: {total_samples_written}")
+print(f"  - Low resolution (2x step): {samples_low_res}")
+print(f"  - Medium resolution (1x step): {samples_medium_res}")
+print(f"  - High resolution (0.5x step): {samples_high_res}")
 print(f"Samples skipped: {total_samples_skipped}")
 print(f"Percentage skipped: {skip_percentage:.2f}%")

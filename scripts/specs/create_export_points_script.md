@@ -40,6 +40,7 @@ This should create a script that can be run in blender, that exports all of the 
 26. **FR-26**: The steeper sampling should be configurable to perform tracing from 4 directions: -x, x, -y, y.
 27. **FR-27**: the high resolution grid, low resolution grid and lower resolution grid should all align.
 28. **FR-28**: The steeper sampling should only use high resolution sampling, but only include those hits with normal steeper then in **FR-18**.
+29. **FR-29**: The steeper sampling should NOT use cos between normal and z axis when calculating scale, since this makes the scale way too big. Instead it should use cos between the normal and the trace direction when calculating scale.
 
 ### Non-Functional Requirements
 

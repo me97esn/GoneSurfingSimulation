@@ -52,6 +52,7 @@ This should create a script that can be run in blender, that exports all of the 
 38. **FR-38**: The skipping of too steep samples from the vertical sampling still applies.
 39. **FR-39**: The ridge of higher resolution should be around 5 samples wide in the positive y direction, and 10 samples wide in the negative y direction. Then there should be around 5 rows of high samples in the negative y direction, and around two in the positive y direction. Then a few rows of medium resolution in both directions before low resolution is used. The goal of this is to get high resolution at the wave, but with as little data as possible while still keeping a high detail of the wave. The exact number of rows per resolution is not important, prioritise aligning them if another number makes it easier to align the samples without increasing the amount of data too much.
 40. **FR-40**: There are gaps when the sampling reduces resolution. Add an extra sample row of the higher resolution every time it transitions to a lower resolution. This boundary sample ensures smooth transitions and prevents gaps between different resolution zones.
+41. **FR-41**: Add two additional lower resolution levels beyond the current low resolution (2.0× step). The new levels should be very-low (4.0× step) and ultra-low (8.0× step). These should be used at increasing distances from the wave peaks to further reduce data size in areas far from the wave.
 
 ### Non-Functional Requirements
 
@@ -183,3 +184,11 @@ This should create a script that can be run in blender, that exports all of the 
   - Horizontal steep sampling (x, -x, y, -y directions) only captures samples within boundary
   - Vertical sampling uses distance-based resolution (FR-35) and is not affected by boundary
   - This limits steep sample capture to relevant areas, reducing data size
+- FR-41 implemented: Two additional lower resolution levels
+  - Added very-low resolution (4.0× step) and ultra-low resolution (8.0× step)
+  - Updated `max_step_multiplier` from 2.0 to 8.0
+  - Resolution progression: ridge (0.25×) → high (0.5×) → medium (1.0×) → low (2.0×) → very-low (4.0×) → ultra-low (8.0×)
+  - Each resolution level gets 2 sample rows in both +y and -y directions
+  - FR-40 boundary samples apply between all transitions including new levels
+  - Statistics tracking updated to count very-low and ultra-low samples separately
+  - Significantly reduces data size in areas far from wave peaks

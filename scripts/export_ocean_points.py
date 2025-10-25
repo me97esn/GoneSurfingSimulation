@@ -30,11 +30,12 @@ max_scale = 4
 # Samples with cos < this value will be skipped to prevent excessively large scales
 min_cos_trace = 0.6  # 50 degrees from perpendicular, limits scale to 4.0 before max_scale clamp
 
-# FR-35: Distance-based resolution configuration
+# FR-35, FR-41: Distance-based resolution configuration
 # Resolution decreases with distance from highest points
 # Highest resolution at peaks, lowest at y edges
 min_step_multiplier = 0.25  # Highest resolution: base_step * 0.25
-max_step_multiplier = 2.0   # Lowest resolution: base_step * 2.0
+max_step_multiplier = 8.0   # Ultra-low resolution: base_step * 8.0 (FR-41)
+# Resolution levels: 0.25 (ridge), 0.5 (high), 1.0 (medium), 2.0 (low), 4.0 (very-low), 8.0 (ultra-low)
 
 # Arrays to store all frames by direction (FR-32)
 frames_data_by_direction = {
@@ -45,10 +46,10 @@ frames_data_by_direction = {
     '-y': []
 }
 
-# Statistics tracking (FR-10)
+# Statistics tracking (FR-10, FR-41)
 # Track samples per direction and per resolution
 stats_by_direction = {
-    'vertical': {'total': 0, 'ridge': 0, 'high': 0, 'medium': 0, 'low': 0},
+    'vertical': {'total': 0, 'ridge': 0, 'high': 0, 'medium': 0, 'low': 0, 'very_low': 0, 'ultra_low': 0},
     'x': {'total': 0, 'steep': 0},
     '-x': {'total': 0, 'steep': 0},
     'y': {'total': 0, 'steep': 0},
@@ -94,16 +95,18 @@ def is_point_in_boundary(point):
 
 def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step):
     """
-    FR-35, FR-39, FR-40: Calculate step multiplier based on distance from highest peaks
+    FR-35, FR-39, FR-40, FR-41: Calculate step multiplier based on distance from highest peaks
     Asymmetric distribution around peak:
     - Ridge (finest): ~5 samples in +y, ~10 samples in -y direction
     - High resolution: ~5 rows in -y, ~2 rows in +y
     - Medium resolution: a few rows in both directions
-    - Low resolution: beyond that
+    - Low resolution: beyond medium
+    - Very-low resolution: beyond low (FR-41)
+    - Ultra-low resolution: beyond very-low (FR-41)
 
     FR-40: Add boundary samples at resolution transitions to prevent gaps
 
-    Returns a step multiplier between min_step_multiplier and max_step_multiplier
+    Returns a step multiplier between min_step_multiplier (0.25) and max_step_multiplier (8.0)
     """
     if not peak_y_positions:
         # No peaks found, use maximum (lowest) resolution
@@ -113,30 +116,39 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
     nearest_peak_y = min(peak_y_positions, key=lambda peak_y: abs(y_pos - peak_y))
     signed_distance = y_pos - nearest_peak_y  # Positive = +y, Negative = -y
 
-    # FR-39: Define resolution zones based on distance from peak
-    # Resolution levels: 0.25 (finest/ridge), 0.5 (high), 1.0 (medium), 2.0 (low)
+    # FR-39, FR-41: Define resolution zones based on distance from peak
+    # Resolution levels: 0.25 (ridge), 0.5 (high), 1.0 (medium), 2.0 (low), 4.0 (very-low), 8.0 (ultra-low)
 
     if signed_distance >= 0:
         # Positive y direction (ahead of peak)
-        ridge_samples = 1 
+        ridge_samples = 0
         high_samples = 1
-        medium_samples = 2
+        medium_samples = 1
+        low_samples = 2  # FR-41
+        very_low_samples = 2  # FR-41
 
         # Calculate zone extents, ensuring they align with their resolution grids
         # Each zone extent must be a multiple of its resolution step to ensure alignment
         ridge_step = base_step * min_step_multiplier
         high_step = base_step * 0.5
         medium_step = base_step * 1.0
+        low_step = base_step * 2.0
+        very_low_step = base_step * 4.0
+        ultra_low_step = base_step * 8.0
 
         ridge_extent = ridge_samples * ridge_step
         high_extent = ridge_extent + high_samples * high_step
         medium_extent = high_extent + medium_samples * medium_step
+        low_extent = medium_extent + low_samples * low_step
+        very_low_extent = low_extent + very_low_samples * very_low_step
 
         # FR-40: Add boundary samples - one extra row at each transition
         # Boundaries extend the higher resolution into the next zone
         ridge_boundary = ridge_extent + ridge_step
         high_boundary = high_extent + high_step
         medium_boundary = medium_extent + medium_step
+        low_boundary = low_extent + low_step
+        very_low_boundary = very_low_extent + very_low_step
 
         if signed_distance < ridge_extent:
             return min_step_multiplier  # 0.25 - finest resolution (ridge)
@@ -150,27 +162,43 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
             return 1.0  # Medium resolution
         elif signed_distance < medium_boundary:
             return 1.0  # Medium resolution - boundary sample (medium into low)
+        elif signed_distance < low_extent:
+            return 2.0  # Low resolution
+        elif signed_distance < low_boundary:
+            return 2.0  # Low resolution - boundary sample (low into very-low)
+        elif signed_distance < very_low_extent:
+            return 4.0  # Very-low resolution (FR-41)
+        elif signed_distance < very_low_boundary:
+            return 4.0  # Very-low resolution - boundary sample (very-low into ultra-low)
         else:
-            return max_step_multiplier  # 2.0 - low resolution
+            return max_step_multiplier  # 8.0 - ultra-low resolution (FR-41)
     else:
         # Negative y direction (behind peak)
         ridge_samples = 0
-        high_samples = 0 
-        medium_samples = 2 
+        high_samples = 0
+        medium_samples = 1
+        low_samples = 2  # FR-41
+        very_low_samples = 2  # FR-41
 
         # Calculate zone extents, ensuring they align with their resolution grids
         ridge_step = base_step * min_step_multiplier
         high_step = base_step * 0.5
         medium_step = base_step * 1.0
+        low_step = base_step * 2.0
+        very_low_step = base_step * 4.0
 
         ridge_extent = ridge_samples * ridge_step
         high_extent = ridge_extent + high_samples * high_step
         medium_extent = high_extent + medium_samples * medium_step
+        low_extent = medium_extent + low_samples * low_step
+        very_low_extent = low_extent + very_low_samples * very_low_step
 
         # FR-40: Add boundary samples - one extra row at each transition
         ridge_boundary = ridge_extent + ridge_step
         high_boundary = high_extent + high_step
         medium_boundary = medium_extent + medium_step
+        low_boundary = low_extent + low_step
+        very_low_boundary = very_low_extent + very_low_step
 
         abs_distance = abs(signed_distance)
         if abs_distance < ridge_extent:
@@ -185,8 +213,16 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
             return 1.0  # Medium resolution
         elif abs_distance < medium_boundary:
             return 1.0  # Medium resolution - boundary sample (medium into low)
+        elif abs_distance < low_extent:
+            return 2.0  # Low resolution
+        elif abs_distance < low_boundary:
+            return 2.0  # Low resolution - boundary sample (low into very-low)
+        elif abs_distance < very_low_extent:
+            return 4.0  # Very-low resolution (FR-41)
+        elif abs_distance < very_low_boundary:
+            return 4.0  # Very-low resolution - boundary sample (very-low into ultra-low)
         else:
-            return max_step_multiplier  # 2.0 - low resolution
+            return max_step_multiplier  # 8.0 - ultra-low resolution (FR-41)
 
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
@@ -532,7 +568,7 @@ for frame in range(start_frame, end_frame + 1):
             frame_data["Scales"].append(combined_scale)
             total_samples_written += 1
 
-            # Track statistics by resolution
+            # Track statistics by resolution (FR-41)
             stats_by_direction['vertical']['total'] += 1
             if step_multiplier == min_step_multiplier:
                 stats_by_direction['vertical']['ridge'] += 1
@@ -540,8 +576,12 @@ for frame in range(start_frame, end_frame + 1):
                 stats_by_direction['vertical']['high'] += 1
             elif step_multiplier == 1.0:
                 stats_by_direction['vertical']['medium'] += 1
-            elif step_multiplier == max_step_multiplier:
+            elif step_multiplier == 2.0:
                 stats_by_direction['vertical']['low'] += 1
+            elif step_multiplier == 4.0:
+                stats_by_direction['vertical']['very_low'] += 1
+            elif step_multiplier == max_step_multiplier:  # 8.0
+                stats_by_direction['vertical']['ultra_low'] += 1
 
     # FR-32: Append frame data for each direction
     for direction in ['vertical', 'x', '-x', 'y', '-y']:
@@ -571,10 +611,12 @@ print("-"*60)
 print(f"\nFile: ocean-points-data-vertical.json")
 print(f"  Total samples: {stats_by_direction['vertical']['total']}")
 print(f"  Samples per resolution:")
-print(f"    - Ridge (0.25× step):  {stats_by_direction['vertical']['ridge']:,}")
-print(f"    - High (0.5× step):    {stats_by_direction['vertical']['high']:,}")
-print(f"    - Medium (1.0× step):  {stats_by_direction['vertical']['medium']:,}")
-print(f"    - Low (2.0× step):     {stats_by_direction['vertical']['low']:,}")
+print(f"    - Ridge (0.25× step):      {stats_by_direction['vertical']['ridge']:,}")
+print(f"    - High (0.5× step):        {stats_by_direction['vertical']['high']:,}")
+print(f"    - Medium (1.0× step):      {stats_by_direction['vertical']['medium']:,}")
+print(f"    - Low (2.0× step):         {stats_by_direction['vertical']['low']:,}")
+print(f"    - Very-low (4.0× step):    {stats_by_direction['vertical']['very_low']:,}")
+print(f"    - Ultra-low (8.0× step):   {stats_by_direction['vertical']['ultra_low']:,}")
 
 # Horizontal files statistics
 for direction in ['x', '-x', 'y', '-y']:

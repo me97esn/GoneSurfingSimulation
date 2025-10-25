@@ -15,9 +15,9 @@ output_filename = "ocean-points-data.json"
 
 # Steep normal thresholds (FR-18, FR-38)
 # For horizontal ray casting: determines which samples to capture with sideways rays
-steep_normal_threshold_horizontal = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
+steep_normal_threshold_horizontal = 0.7  # cos(60 degrees) - angles steeper than 60 degrees from vertical
 # For vertical sampling: determines which samples to skip (handled by horizontal instead)
-steep_normal_threshold_vertical = steep_normal_threshold_horizontal + 0.05 # A little more to make sure every sample is handled
+steep_normal_threshold_vertical = 0.55 
 # Sideways ray casting directions (FR-26): can include '-x', 'x', '-y', 'y'
 steep_ray_directions = ['x', '-x', 'y', '-y']  # Configurable list of directions
 
@@ -78,18 +78,25 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
 
     if signed_distance >= 0:
         # Positive y direction (ahead of peak)
-        ridge_samples = 4
-        high_samples = 3
+        ridge_samples = 4 
+        high_samples = 2
         medium_samples = 2
 
-        ridge_extent = ridge_samples * base_step * min_step_multiplier
-        high_extent = ridge_extent + high_samples * base_step * 0.5
-        medium_extent = high_extent + medium_samples * base_step * 1.0
+        # Calculate zone extents, ensuring they align with their resolution grids
+        # Each zone extent must be a multiple of its resolution step to ensure alignment
+        ridge_step = base_step * min_step_multiplier
+        high_step = base_step * 0.5
+        medium_step = base_step * 1.0
+
+        ridge_extent = ridge_samples * ridge_step
+        high_extent = ridge_extent + high_samples * high_step
+        medium_extent = high_extent + medium_samples * medium_step
 
         # FR-40: Add boundary samples - one extra row at each transition
-        ridge_boundary = ridge_extent + base_step * min_step_multiplier
-        high_boundary = high_extent + base_step * 0.5
-        medium_boundary = medium_extent + base_step * 1.0
+        # Boundaries extend the higher resolution into the next zone
+        ridge_boundary = ridge_extent + ridge_step
+        high_boundary = high_extent + high_step
+        medium_boundary = medium_extent + medium_step
 
         if signed_distance < ridge_extent:
             return min_step_multiplier  # 0.25 - finest resolution (ridge)
@@ -107,18 +114,23 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
             return max_step_multiplier  # 2.0 - low resolution
     else:
         # Negative y direction (behind peak)
-        ridge_samples = 2
+        ridge_samples = 1
         high_samples = 2
-        medium_samples = 2
+        medium_samples = 2 
 
-        ridge_extent = ridge_samples * base_step * min_step_multiplier
-        high_extent = ridge_extent + high_samples * base_step * 0.5
-        medium_extent = high_extent + medium_samples * base_step * 1.0
+        # Calculate zone extents, ensuring they align with their resolution grids
+        ridge_step = base_step * min_step_multiplier
+        high_step = base_step * 0.5
+        medium_step = base_step * 1.0
+
+        ridge_extent = ridge_samples * ridge_step
+        high_extent = ridge_extent + high_samples * high_step
+        medium_extent = high_extent + medium_samples * medium_step
 
         # FR-40: Add boundary samples - one extra row at each transition
-        ridge_boundary = ridge_extent + base_step * min_step_multiplier
-        high_boundary = high_extent + base_step * 0.5
-        medium_boundary = medium_extent + base_step * 1.0
+        ridge_boundary = ridge_extent + ridge_step
+        high_boundary = high_extent + high_step
+        medium_boundary = medium_extent + medium_step
 
         abs_distance = abs(signed_distance)
         if abs_distance < ridge_extent:

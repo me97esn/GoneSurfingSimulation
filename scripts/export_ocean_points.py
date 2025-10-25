@@ -49,11 +49,14 @@ def is_steep_normal(normal):
     cos_angle = abs(normal.dot(z_axis))
     return cos_angle < steep_normal_threshold
 
-def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, y_length):
+def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step):
     """
-    FR-35: Calculate step multiplier based on distance from highest peaks
-    Highest resolution at peaks, gradually decreasing toward y edges
-    Along the x-axis at peak height, maintain highest resolution
+    FR-35, FR-39: Calculate step multiplier based on distance from highest peaks
+    Asymmetric distribution around peak:
+    - Ridge (finest): ~5 samples in +y, ~10 samples in -y direction
+    - High resolution: ~5 rows in -y, ~2 rows in +y
+    - Medium resolution: a few rows in both directions
+    - Low resolution: beyond that
 
     Returns a step multiplier between min_step_multiplier and max_step_multiplier
     """
@@ -61,35 +64,50 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, y_length):
         # No peaks found, use maximum (lowest) resolution
         return max_step_multiplier
 
-    # Find distance to nearest peak in y direction
-    min_distance_to_peak = min(abs(y_pos - peak_y) for peak_y in peak_y_positions)
+    # Find nearest peak and signed distance (positive = +y direction, negative = -y direction)
+    nearest_peak_y = min(peak_y_positions, key=lambda peak_y: abs(y_pos - peak_y))
+    signed_distance = y_pos - nearest_peak_y  # Positive = +y, Negative = -y
 
-    # Normalize distances
-    # At the peak: min_distance_to_peak = 0, use min_step_multiplier (highest res)
-    # At edges: distance_from_edge = 0, use max_step_multiplier (lowest res)
-    # Gradual transition in between
+    # FR-39: Define resolution zones based on distance from peak
+    # Resolution levels: 0.25 (finest/ridge), 0.5 (high), 1.0 (medium), 2.0 (low)
 
-    # Use distance from peak as primary factor
-    # Peak region extends to about 20% of y_length
-    peak_region_size = y_length * 0.2
+    if signed_distance >= 0:
+        # Positive y direction (ahead of peak)
+        ridge_samples = 5
+        high_samples = 2
+        medium_samples = 3
 
-    if min_distance_to_peak < peak_region_size:
-        # In peak region: interpolate from min to mid resolution
-        t = min_distance_to_peak / peak_region_size
-        step_mult = min_step_multiplier + (1.0 - min_step_multiplier) * t
-    else:
-        # Outside peak region: interpolate based on distance from edges
-        # Distance from peak region boundary
-        distance_from_peak_region = min_distance_to_peak - peak_region_size
-        remaining_distance = (y_length / 2.0) - peak_region_size
+        ridge_extent = ridge_samples * base_step * min_step_multiplier
+        high_extent = ridge_extent + high_samples * base_step * 0.5
+        medium_extent = high_extent + medium_samples * base_step * 1.0
 
-        if remaining_distance > 0:
-            t = min(distance_from_peak_region / remaining_distance, 1.0)
-            step_mult = 1.0 + (max_step_multiplier - 1.0) * t
+        if signed_distance < ridge_extent:
+            return min_step_multiplier  # 0.25 - finest resolution (ridge)
+        elif signed_distance < high_extent:
+            return 0.5  # High resolution
+        elif signed_distance < medium_extent:
+            return 1.0  # Medium resolution
         else:
-            step_mult = max_step_multiplier
+            return max_step_multiplier  # 2.0 - low resolution
+    else:
+        # Negative y direction (behind peak)
+        ridge_samples = 10
+        high_samples = 5
+        medium_samples = 3
 
-    return step_mult
+        ridge_extent = ridge_samples * base_step * min_step_multiplier
+        high_extent = ridge_extent + high_samples * base_step * 0.5
+        medium_extent = high_extent + medium_samples * base_step * 1.0
+
+        abs_distance = abs(signed_distance)
+        if abs_distance < ridge_extent:
+            return min_step_multiplier  # 0.25 - finest resolution (ridge)
+        elif abs_distance < high_extent:
+            return 0.5  # High resolution
+        elif abs_distance < medium_extent:
+            return 1.0  # Medium resolution
+        else:
+            return max_step_multiplier  # 2.0 - low resolution
 
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
@@ -350,9 +368,9 @@ for frame in range(start_frame, end_frame + 1):
             x_pos = start_trace_x + finest_step * x_fine
             y_pos = start_trace_y + finest_step * y_fine
 
-            # FR-35: Calculate resolution at this position based on distance from peaks
+            # FR-35, FR-39: Calculate resolution at this position based on distance from peaks
             step_multiplier = calculate_distance_based_step_multiplier(
-                y_pos, peak_y_positions, y_length
+                y_pos, peak_y_positions, base_step
             )
             local_step = base_step * step_multiplier
 

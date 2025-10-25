@@ -50,6 +50,7 @@ This should create a script that can be run in blender, that exports all of the 
 36. **FR-36**: All of the samples should align, and there should be no gaps between them.
 37. **FR-37**: The scaling of the sampling should be as before: adjusted by both normal and step size.
 38. **FR-38**: The skipping of too steep samples from the vertical sampling still applies.
+39. **FR-39**: The ridge of higher resolution should be around 5 samples wide in the positive y direction, and 10 samples wide in the negative y direction. Then there should be around 5 rows of high samples in the negative y direction, and around two in the positive y direction. Then a few rows of medium resolution in both directions before low resolution is used. The goal of this is to get high resolution at the wave, but with as little data as possible while still keeping a high detail of the wave. The exact number of rows per resolution is not important, prioritise aligning them if another number makes it easier to align the samples without increasing the amount of data too much.
 
 ### Non-Functional Requirements
 
@@ -157,3 +158,13 @@ This should create a script that can be run in blender, that exports all of the 
   - Vertical sampling checks `is_steep_normal()` and skips if true
   - Steep samples only handled by horizontal ray casting (FR-18)
   - This prevents duplicate/conflicting samples from vertical and horizontal directions
+- FR-39 implemented: Asymmetric resolution distribution around wave ridge
+  - Replaced gradual interpolation with discrete resolution zones
+  - **Ridge (0.25x step)**: ~5 samples wide in +y direction, ~10 samples wide in -y direction
+  - **High resolution (0.5x step)**: ~2 rows in +y direction, ~5 rows in -y direction
+  - **Medium resolution (1.0x step)**: ~3 rows in both directions
+  - **Low resolution (2.0x step)**: Beyond medium zone
+  - Asymmetric distribution optimizes data size while maintaining wave detail
+  - Uses signed distance from peak to determine direction (+y vs -y)
+  - Zone extents calculated based on base_step and resolution multipliers
+  - Ensures alignment by using consistent step sizes within each zone

@@ -118,8 +118,8 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
 
     if signed_distance >= 0:
         # Positive y direction (ahead of peak)
-        ridge_samples = 4 
-        high_samples = 2
+        ridge_samples = 1 
+        high_samples = 1
         medium_samples = 2
 
         # Calculate zone extents, ensuring they align with their resolution grids
@@ -154,8 +154,8 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
             return max_step_multiplier  # 2.0 - low resolution
     else:
         # Negative y direction (behind peak)
-        ridge_samples = 1
-        high_samples = 2
+        ridge_samples = 0
+        high_samples = 0 
         medium_samples = 2 
 
         # Calculate zone extents, ensuring they align with their resolution grids

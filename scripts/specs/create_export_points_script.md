@@ -46,6 +46,10 @@ This should create a script that can be run in blender, that exports all of the 
 32. **FR-32**: The script should split the results into separate files, one for each direction of the ray cast.
 33. **FR-33**: The highest 1% of the samples in **FR-16** should use even higher resolution.
 34. **FR-34**: There are some gaps when the low resolution meet medium resolution. If this is because of a bug it should be fixed, otherwise an extra row of medium resolution samples can be added in these areas to minimize the risk of gaps.
+35. **FR-35**: The **FR-9**, **FR-11**, **FR-12**, **FR-22**,**FR-24**,**FR-31**, **FR-34** no longer apply. Instead: first identify the highest 1% of the samples each frame. The samples for these highest points should be made with the highest resolution. Gradually decrease the resolution with distence to the highest samples, so that at the two y edges it has the lowest resolution. But all along the highest peak, which spans between the x edges, there should be highest resolution. The resolution don't have to be in discreet steps, it can also be gradual.
+36. **FR-36**: All of the samples should align, and there should be no gaps between them.
+37. **FR-37**: The scaling of the sampling should be as before: adjusted by both normal and step size.
+38. **FR-38**: The skipping of too steep samples from the vertical sampling still applies.
 
 ### Non-Functional Requirements
 
@@ -124,8 +128,32 @@ This should create a script that can be run in blender, that exports all of the 
   - Extra-high resolution uses step/4 spacing (16 samples per grid cell)
   - Step scale is 0.25 for extra-high resolution samples
   - Provides even denser sampling at wave peaks and critical areas
-- FR-34 implemented: Boundary samples prevent gaps between resolution levels
+- FR-34 implemented: Boundary samples prevent gaps between resolution levels (superseded by FR-35)
   - Added neighbor checking to detect resolution boundaries
   - When low-resolution cell is adjacent to medium/high/extra-high resolution cell, it upgrades to medium resolution
   - This creates a transition zone that prevents gaps at resolution boundaries
   - Ensures continuous coverage across the entire surface
+- FR-35 implemented: Complete redesign with distance-based resolution system
+  - Removed normal-steepness-based resolution (FR-9, FR-11, FR-12, FR-22, FR-24, FR-31, FR-34 no longer apply)
+  - First pass: coarse sampling at base resolution to identify highest 1% of samples
+  - Identifies y-positions of peak samples (highest 1%) which define the "peak line" along x-axis
+  - Resolution gradually decreases with distance from peaks: highest at peaks, lowest at y edges
+  - Resolution is continuous/gradual rather than discrete steps
+  - Uses `calculate_distance_based_step_multiplier()` function to determine step size based on distance from peak
+  - Peak region (20% of y_length): interpolates from min_step_multiplier (0.25) to 1.0
+  - Outside peak region: interpolates from 1.0 to max_step_multiplier (2.0) based on distance from peak region
+  - Along entire x-axis at peak height: maintains highest resolution
+- FR-36 implemented: All samples align with no gaps
+  - Uses finest resolution (base_step * min_step_multiplier) as base grid
+  - Samples only at positions that align with local resolution using alignment check
+  - Position must align in both x and y with the local step size
+  - Prevents gaps by ensuring consistent grid alignment across variable resolution regions
+- FR-37 implemented: Scale adjustment by both normal and step size maintained
+  - All samples calculate scale as: step_scale * normal_scale
+  - step_scale = step_multiplier (for vertical) or high_res_step/base_step (for horizontal steep)
+  - normal_scale = 1 / cos(normal, ray_direction)
+  - Combined scale clamped to max_scale (4.0)
+- FR-38 implemented: Steep samples skipped from vertical sampling
+  - Vertical sampling checks `is_steep_normal()` and skips if true
+  - Steep samples only handled by horizontal ray casting (FR-18)
+  - This prevents duplicate/conflicting samples from vertical and horizontal directions

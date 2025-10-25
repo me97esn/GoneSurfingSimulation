@@ -13,8 +13,11 @@ base_step = 4  # Base step size for medium resolution
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
 output_filename = "ocean-points-data.json"
 
-# Steep normal threshold for sideways ray casting (FR-18, FR-38)
-steep_normal_threshold = 0.866  # cos(30 degrees) - angles steeper than 30 degrees from vertical
+# Steep normal thresholds (FR-18, FR-38)
+# For horizontal ray casting: determines which samples to capture with sideways rays
+steep_normal_threshold_horizontal = 0.5  # cos(60 degrees) - angles steeper than 60 degrees from vertical
+# For vertical sampling: determines which samples to skip (handled by horizontal instead)
+steep_normal_threshold_vertical = steep_normal_threshold_horizontal + 0.05 # A little more to make sure every sample is handled
 # Sideways ray casting directions (FR-26): can include '-x', 'x', '-y', 'y'
 steep_ray_directions = ['x', '-x', 'y', '-y']  # Configurable list of directions
 
@@ -43,20 +46,22 @@ frames_data_by_direction = {
 # Statistics tracking (FR-10)
 total_samples_written = 0
 
-def is_steep_normal(normal):
-    """Check if normal is steep enough for sideways ray casting (FR-18, FR-38)"""
+def is_steep_normal(normal, threshold):
+    """Check if normal is steep enough based on threshold (FR-18, FR-38)"""
     z_axis = Vector((0, 0, 1))
     cos_angle = abs(normal.dot(z_axis))
-    return cos_angle < steep_normal_threshold
+    return cos_angle < threshold
 
 def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step):
     """
-    FR-35, FR-39: Calculate step multiplier based on distance from highest peaks
+    FR-35, FR-39, FR-40: Calculate step multiplier based on distance from highest peaks
     Asymmetric distribution around peak:
     - Ridge (finest): ~5 samples in +y, ~10 samples in -y direction
     - High resolution: ~5 rows in -y, ~2 rows in +y
     - Medium resolution: a few rows in both directions
     - Low resolution: beyond that
+
+    FR-40: Add boundary samples at resolution transitions to prevent gaps
 
     Returns a step multiplier between min_step_multiplier and max_step_multiplier
     """
@@ -73,39 +78,61 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
 
     if signed_distance >= 0:
         # Positive y direction (ahead of peak)
-        ridge_samples = 5
-        high_samples = 2
-        medium_samples = 3
+        ridge_samples = 4
+        high_samples = 3
+        medium_samples = 2
 
         ridge_extent = ridge_samples * base_step * min_step_multiplier
         high_extent = ridge_extent + high_samples * base_step * 0.5
         medium_extent = high_extent + medium_samples * base_step * 1.0
 
+        # FR-40: Add boundary samples - one extra row at each transition
+        ridge_boundary = ridge_extent + base_step * min_step_multiplier
+        high_boundary = high_extent + base_step * 0.5
+        medium_boundary = medium_extent + base_step * 1.0
+
         if signed_distance < ridge_extent:
             return min_step_multiplier  # 0.25 - finest resolution (ridge)
+        elif signed_distance < ridge_boundary:
+            return min_step_multiplier  # 0.25 - boundary sample (ridge into high)
         elif signed_distance < high_extent:
             return 0.5  # High resolution
+        elif signed_distance < high_boundary:
+            return 0.5  # High resolution - boundary sample (high into medium)
         elif signed_distance < medium_extent:
             return 1.0  # Medium resolution
+        elif signed_distance < medium_boundary:
+            return 1.0  # Medium resolution - boundary sample (medium into low)
         else:
             return max_step_multiplier  # 2.0 - low resolution
     else:
         # Negative y direction (behind peak)
-        ridge_samples = 10
-        high_samples = 5
-        medium_samples = 3
+        ridge_samples = 2
+        high_samples = 2
+        medium_samples = 2
 
         ridge_extent = ridge_samples * base_step * min_step_multiplier
         high_extent = ridge_extent + high_samples * base_step * 0.5
         medium_extent = high_extent + medium_samples * base_step * 1.0
 
+        # FR-40: Add boundary samples - one extra row at each transition
+        ridge_boundary = ridge_extent + base_step * min_step_multiplier
+        high_boundary = high_extent + base_step * 0.5
+        medium_boundary = medium_extent + base_step * 1.0
+
         abs_distance = abs(signed_distance)
         if abs_distance < ridge_extent:
             return min_step_multiplier  # 0.25 - finest resolution (ridge)
+        elif abs_distance < ridge_boundary:
+            return min_step_multiplier  # 0.25 - boundary sample (ridge into high)
         elif abs_distance < high_extent:
             return 0.5  # High resolution
+        elif abs_distance < high_boundary:
+            return 0.5  # High resolution - boundary sample (high into medium)
         elif abs_distance < medium_extent:
             return 1.0  # Medium resolution
+        elif abs_distance < medium_boundary:
+            return 1.0  # Medium resolution - boundary sample (medium into low)
         else:
             return max_step_multiplier  # 2.0 - low resolution
 
@@ -210,7 +237,7 @@ for frame in range(start_frame, end_frame + 1):
                     ray_direction_vec.normalize()
                     hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    if hit and is_steep_normal(normals):  # FR-38: Only steep samples
+                    if hit and is_steep_normal(normals, steep_normal_threshold_horizontal):  # FR-38: Only steep samples
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
@@ -251,7 +278,7 @@ for frame in range(start_frame, end_frame + 1):
                     ray_direction_vec.normalize()
                     hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    if hit and is_steep_normal(normals):
+                    if hit and is_steep_normal(normals, steep_normal_threshold_horizontal):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
@@ -290,7 +317,7 @@ for frame in range(start_frame, end_frame + 1):
                     ray_direction_vec.normalize()
                     hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    if hit and is_steep_normal(normals):
+                    if hit and is_steep_normal(normals, steep_normal_threshold_horizontal):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
@@ -329,7 +356,7 @@ for frame in range(start_frame, end_frame + 1):
                     ray_direction_vec.normalize()
                     hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction_vec)
 
-                    if hit and is_steep_normal(normals):
+                    if hit and is_steep_normal(normals, steep_normal_threshold_horizontal):
                         normals.normalize()
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
@@ -400,7 +427,7 @@ for frame in range(start_frame, end_frame + 1):
             normals.normalize()
 
             # FR-38: Skip samples with steep normals (handled by horizontal raycasts)
-            if is_steep_normal(normals):
+            if is_steep_normal(normals, steep_normal_threshold_vertical):
                 continue
 
             # FR-30: Skip samples too perpendicular to ray direction

@@ -51,6 +51,7 @@ This should create a script that can be run in blender, that exports all of the 
 37. **FR-37**: The scaling of the sampling should be as before: adjusted by both normal and step size.
 38. **FR-38**: The skipping of too steep samples from the vertical sampling still applies.
 39. **FR-39**: The ridge of higher resolution should be around 5 samples wide in the positive y direction, and 10 samples wide in the negative y direction. Then there should be around 5 rows of high samples in the negative y direction, and around two in the positive y direction. Then a few rows of medium resolution in both directions before low resolution is used. The goal of this is to get high resolution at the wave, but with as little data as possible while still keeping a high detail of the wave. The exact number of rows per resolution is not important, prioritise aligning them if another number makes it easier to align the samples without increasing the amount of data too much.
+40. **FR-40**: There are gaps when the sampling reduces resolution. Add an extra sample row of the higher resolution every time it transitions to a lower resolution. This boundary sample ensures smooth transitions and prevents gaps between different resolution zones.
 
 ### Non-Functional Requirements
 
@@ -168,3 +169,11 @@ This should create a script that can be run in blender, that exports all of the 
   - Uses signed distance from peak to determine direction (+y vs -y)
   - Zone extents calculated based on base_step and resolution multipliers
   - Ensures alignment by using consistent step sizes within each zone
+- FR-40 implemented: Boundary samples at resolution transitions
+  - Added one extra row of higher resolution at each transition boundary
+  - Ridge → High: Extra ridge-resolution row prevents gaps
+  - High → Medium: Extra high-resolution row prevents gaps
+  - Medium → Low: Extra medium-resolution row prevents gaps
+  - Applies to both +y and -y directions
+  - Boundary samples calculated as: `zone_extent + base_step * zone_resolution`
+  - Ensures smooth transitions and continuous coverage between resolution zones

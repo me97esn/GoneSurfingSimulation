@@ -177,3 +177,9 @@ This should create a script that can be run in blender, that exports all of the 
   - Applies to both +y and -y directions
   - Boundary samples calculated as: `zone_extent + base_step * zone_resolution`
   - Ensures smooth transitions and continuous coverage between resolution zones
+- FR-11 re-applied to horizontal steep sampling only
+  - Restored `High_resolution_boundary` mesh object reference
+  - Added `is_point_in_boundary()` function back
+  - Horizontal steep sampling (x, -x, y, -y directions) only captures samples within boundary
+  - Vertical sampling uses distance-based resolution (FR-35) and is not affected by boundary
+  - This limits steep sample capture to relevant areas, reducing data size

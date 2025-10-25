@@ -4,6 +4,8 @@ import bpy
 from mathutils import Vector
 
 target_object = bpy.data.objects['fluid_surface']
+# High resolution boundary mesh (FR-11) - applies to horizontal steep sampling only
+high_res_boundary = bpy.data.objects.get('High_resolution_boundary')
 start_frame = 752
 end_frame = 1325
 # end_frame = 754
@@ -44,13 +46,51 @@ frames_data_by_direction = {
 }
 
 # Statistics tracking (FR-10)
+# Track samples per direction and per resolution
+stats_by_direction = {
+    'vertical': {'total': 0, 'ridge': 0, 'high': 0, 'medium': 0, 'low': 0},
+    'x': {'total': 0, 'steep': 0},
+    '-x': {'total': 0, 'steep': 0},
+    'y': {'total': 0, 'steep': 0},
+    '-y': {'total': 0, 'steep': 0}
+}
 total_samples_written = 0
+total_top_1_percent_samples = 0
 
 def is_steep_normal(normal, threshold):
     """Check if normal is steep enough based on threshold (FR-18, FR-38)"""
     z_axis = Vector((0, 0, 1))
     cos_angle = abs(normal.dot(z_axis))
     return cos_angle < threshold
+
+def is_point_in_boundary(point):
+    """Check if a point is within the High_resolution_boundary mesh (FR-11)
+    Used for horizontal steep sampling only"""
+    if high_res_boundary is None:
+        return True  # If no boundary mesh, allow all points
+
+    # Convert point to local space of the boundary mesh
+    point_local = high_res_boundary.matrix_world.inverted() @ point
+
+    # Use ray casting to determine if point is inside the mesh
+    # Cast a ray from the point in the +Z direction
+    ray_direction = Vector((0, 0, 1))
+    hit, location, normal, index = high_res_boundary.ray_cast(point_local, ray_direction)
+
+    # If we hit the mesh, we're inside if the normal points away from our direction
+    if hit:
+        # Check if we're below the hit point (inside the mesh)
+        if point_local.z < location.z:
+            return True
+
+    # Also cast in -Z direction to be more robust
+    ray_direction = Vector((0, 0, -1))
+    hit, location, normal, index = high_res_boundary.ray_cast(point_local, ray_direction)
+    if hit:
+        if point_local.z > location.z:
+            return True
+
+    return False
 
 def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step):
     """
@@ -224,12 +264,15 @@ for frame in range(start_frame, end_frame + 1):
     # FR-35: Find y positions of highest 1% samples
     # These define the "peak line" along x-axis
     peak_y_positions = set()
+    num_top_1_percent = 0
     for sample in coarse_samples:
         if sample['height'] >= height_threshold_top_1_percent:
             peak_y_positions.add(sample['y_pos'])
+            num_top_1_percent += 1
 
     peak_y_positions = sorted(list(peak_y_positions))
-    print(f"Frame {frame}: Found {len(peak_y_positions)} peak y-positions at threshold {height_threshold_top_1_percent:.2f}")
+    total_top_1_percent_samples += num_top_1_percent
+    print(f"Frame {frame}: Found {len(peak_y_positions)} peak y-positions at threshold {height_threshold_top_1_percent:.2f}, {num_top_1_percent} samples in top 1%")
 
     # FR-18, FR-26, FR-28: Process steep normals with sideways ray casting
     frame_data = None
@@ -254,6 +297,10 @@ for frame in range(start_frame, end_frame + 1):
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
+                        # FR-11: Only capture steep samples within boundary
+                        if not is_point_in_boundary(location_world):
+                            continue
+
                         # FR-30: Skip samples too perpendicular to ray direction
                         cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
@@ -276,6 +323,8 @@ for frame in range(start_frame, end_frame + 1):
                         combined_scale = min(combined_scale, max_scale)
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        stats_by_direction['x']['total'] += 1
+                        stats_by_direction['x']['steep'] += 1
 
         elif direction == '-x':
             frame_data = frame_data_by_direction['-x']
@@ -295,6 +344,10 @@ for frame in range(start_frame, end_frame + 1):
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
+                        # FR-11: Only capture steep samples within boundary
+                        if not is_point_in_boundary(location_world):
+                            continue
+
                         cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue
@@ -315,6 +368,8 @@ for frame in range(start_frame, end_frame + 1):
                         combined_scale = min(combined_scale, max_scale)
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        stats_by_direction['-x']['total'] += 1
+                        stats_by_direction['-x']['steep'] += 1
 
         elif direction == 'y':
             frame_data = frame_data_by_direction['y']
@@ -334,6 +389,10 @@ for frame in range(start_frame, end_frame + 1):
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
+                        # FR-11: Only capture steep samples within boundary
+                        if not is_point_in_boundary(location_world):
+                            continue
+
                         cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue
@@ -354,6 +413,8 @@ for frame in range(start_frame, end_frame + 1):
                         combined_scale = min(combined_scale, max_scale)
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        stats_by_direction['y']['total'] += 1
+                        stats_by_direction['y']['steep'] += 1
 
         elif direction == '-y':
             frame_data = frame_data_by_direction['-y']
@@ -373,6 +434,10 @@ for frame in range(start_frame, end_frame + 1):
                         location_world = target_object.matrix_world @ location
                         normals_world = (target_object.matrix_world.to_3x3() @ normals).normalized()
 
+                        # FR-11: Only capture steep samples within boundary
+                        if not is_point_in_boundary(location_world):
+                            continue
+
                         cos_trace = abs(normals_world.dot(ray_direction_vec))
                         if cos_trace < min_cos_trace:
                             continue
@@ -393,6 +458,8 @@ for frame in range(start_frame, end_frame + 1):
                         combined_scale = min(combined_scale, max_scale)
                         frame_data["Scales"].append(combined_scale)
                         total_samples_written += 1
+                        stats_by_direction['-y']['total'] += 1
+                        stats_by_direction['-y']['steep'] += 1
 
     # FR-35: Vertical sampling with distance-based resolution
     # Sample with variable resolution based on distance from peaks
@@ -465,6 +532,17 @@ for frame in range(start_frame, end_frame + 1):
             frame_data["Scales"].append(combined_scale)
             total_samples_written += 1
 
+            # Track statistics by resolution
+            stats_by_direction['vertical']['total'] += 1
+            if step_multiplier == min_step_multiplier:
+                stats_by_direction['vertical']['ridge'] += 1
+            elif step_multiplier == 0.5:
+                stats_by_direction['vertical']['high'] += 1
+            elif step_multiplier == 1.0:
+                stats_by_direction['vertical']['medium'] += 1
+            elif step_multiplier == max_step_multiplier:
+                stats_by_direction['vertical']['low'] += 1
+
     # FR-32: Append frame data for each direction
     for direction in ['vertical', 'x', '-x', 'y', '-y']:
         frames_data_by_direction[direction].append(frame_data_by_direction[direction])
@@ -479,5 +557,30 @@ for direction in ['vertical', 'x', '-x', 'y', '-y']:
     print(f"Written {len(frames_data_by_direction[direction])} frames to {direction_filename}")
 
 # Print statistics (FR-10)
-print("Export completed!")
-print(f"Total samples written: {total_samples_written}")
+print("\n" + "="*60)
+print("EXPORT COMPLETED!")
+print("="*60)
+print(f"\nTotal samples written across all directions: {total_samples_written}")
+print(f"Total samples in highest 1%: {total_top_1_percent_samples}")
+
+print("\n" + "-"*60)
+print("STATISTICS PER FILE/DIRECTION:")
+print("-"*60)
+
+# Vertical file statistics
+print(f"\nFile: ocean-points-data-vertical.json")
+print(f"  Total samples: {stats_by_direction['vertical']['total']}")
+print(f"  Samples per resolution:")
+print(f"    - Ridge (0.25× step):  {stats_by_direction['vertical']['ridge']:,}")
+print(f"    - High (0.5× step):    {stats_by_direction['vertical']['high']:,}")
+print(f"    - Medium (1.0× step):  {stats_by_direction['vertical']['medium']:,}")
+print(f"    - Low (2.0× step):     {stats_by_direction['vertical']['low']:,}")
+
+# Horizontal files statistics
+for direction in ['x', '-x', 'y', '-y']:
+    print(f"\nFile: ocean-points-data-{direction}.json")
+    print(f"  Total samples: {stats_by_direction[direction]['total']}")
+    print(f"  Samples per resolution:")
+    print(f"    - Steep samples (0.25× step): {stats_by_direction[direction]['steep']:,}")
+
+print("\n" + "="*60)

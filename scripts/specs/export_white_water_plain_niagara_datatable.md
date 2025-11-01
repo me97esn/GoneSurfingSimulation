@@ -40,7 +40,11 @@ This script should export white water particles in the same format as the format
 - FR-1: Script created as Node.js script
 - FR-2: Output format matches WavePointsData_Example.json structure
 - FR-3: Keys follow same format as export_ocean_points.py (Frame_XXX)
-- FR-4: README.md update required (not yet implemented)
+- FR-4: README.md updated with white water export instructions (COMPLETED)
+  - Added section "White water" (lines 35-62)
+  - Includes Blender export steps
+  - Includes script usage instructions with command-line example
+  - Documents output format and compatibility with Niagara
 - FR-5: Normals and Scales are empty arrays in output
 - FR-6: Positions extracted from OBJ vertex data (lines starting with "v ")
 - FR-7: Z-axis rotation implemented

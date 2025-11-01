@@ -33,7 +33,7 @@ min_cos_trace = 0.6  # 50 degrees from perpendicular, limits scale to 4.0 before
 # FR-35: Distance-based resolution configuration
 # Resolution decreases with distance from highest points
 # Highest resolution at peaks, lowest at y edges
-min_step_multiplier = 0.25  # Highest resolution: base_step * 0.25
+min_step_multiplier = 0.5  # Highest resolution: base_step * 0.5 (high resolution)
 max_step_multiplier = 2.0   # Lowest resolution: base_step * 2.0
 
 # Arrays to store all frames by direction (FR-32)
@@ -48,7 +48,7 @@ frames_data_by_direction = {
 # Statistics tracking (FR-10)
 # Track samples per direction and per resolution
 stats_by_direction = {
-    'vertical': {'total': 0, 'ridge': 0, 'high': 0, 'medium': 0, 'low': 0},
+    'vertical': {'total': 0, 'high': 0, 'medium': 0, 'low': 0},
     'x': {'total': 0, 'steep': 0},
     '-x': {'total': 0, 'steep': 0},
     'y': {'total': 0, 'steep': 0},
@@ -96,14 +96,13 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
     """
     FR-35, FR-39, FR-40: Calculate step multiplier based on distance from highest peaks
     Asymmetric distribution around peak:
-    - Ridge (finest): ~5 samples in +y, ~10 samples in -y direction
-    - High resolution: ~5 rows in -y, ~2 rows in +y
-    - Medium resolution: a few rows in both directions
+    - High (finest): ~4 samples in +y, ~1 samples in -y direction
+    - Medium resolution: ~2 rows in both directions
     - Low resolution: beyond that
 
     FR-40: Add boundary samples at resolution transitions to prevent gaps
 
-    Returns a step multiplier between min_step_multiplier and max_step_multiplier
+    Returns a step multiplier between min_step_multiplier (0.5) and max_step_multiplier (2.0)
     """
     if not peak_y_positions:
         # No peaks found, use maximum (lowest) resolution
@@ -114,38 +113,30 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
     signed_distance = y_pos - nearest_peak_y  # Positive = +y, Negative = -y
 
     # FR-39: Define resolution zones based on distance from peak
-    # Resolution levels: 0.25 (finest/ridge), 0.5 (high), 1.0 (medium), 2.0 (low)
+    # Resolution levels: 0.5 (high/finest), 1.0 (medium), 2.0 (low)
 
     if signed_distance >= 0:
         # Positive y direction (ahead of peak)
-        ridge_samples = 4 
-        high_samples = 2
+        high_samples = 4  # Renamed from ridge_samples, now uses 0.5× resolution
         medium_samples = 2
 
         # Calculate zone extents, ensuring they align with their resolution grids
         # Each zone extent must be a multiple of its resolution step to ensure alignment
-        ridge_step = base_step * min_step_multiplier
-        high_step = base_step * 0.5
+        high_step = base_step * min_step_multiplier  # 0.5×
         medium_step = base_step * 1.0
 
-        ridge_extent = ridge_samples * ridge_step
-        high_extent = ridge_extent + high_samples * high_step
+        high_extent = high_samples * high_step
         medium_extent = high_extent + medium_samples * medium_step
 
         # FR-40: Add boundary samples - one extra row at each transition
         # Boundaries extend the higher resolution into the next zone
-        ridge_boundary = ridge_extent + ridge_step
         high_boundary = high_extent + high_step
         medium_boundary = medium_extent + medium_step
 
-        if signed_distance < ridge_extent:
-            return min_step_multiplier  # 0.25 - finest resolution (ridge)
-        elif signed_distance < ridge_boundary:
-            return min_step_multiplier  # 0.25 - boundary sample (ridge into high)
-        elif signed_distance < high_extent:
-            return 0.5  # High resolution
+        if signed_distance < high_extent:
+            return min_step_multiplier  # 0.5 - finest resolution (high)
         elif signed_distance < high_boundary:
-            return 0.5  # High resolution - boundary sample (high into medium)
+            return min_step_multiplier  # 0.5 - boundary sample (high into medium)
         elif signed_distance < medium_extent:
             return 1.0  # Medium resolution
         elif signed_distance < medium_boundary:
@@ -154,33 +145,25 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
             return max_step_multiplier  # 2.0 - low resolution
     else:
         # Negative y direction (behind peak)
-        ridge_samples = 1
-        high_samples = 2
-        medium_samples = 2 
+        high_samples = 1  # Renamed from ridge_samples, now uses 0.5× resolution
+        medium_samples = 2
 
         # Calculate zone extents, ensuring they align with their resolution grids
-        ridge_step = base_step * min_step_multiplier
-        high_step = base_step * 0.5
+        high_step = base_step * min_step_multiplier  # 0.5×
         medium_step = base_step * 1.0
 
-        ridge_extent = ridge_samples * ridge_step
-        high_extent = ridge_extent + high_samples * high_step
+        high_extent = high_samples * high_step
         medium_extent = high_extent + medium_samples * medium_step
 
         # FR-40: Add boundary samples - one extra row at each transition
-        ridge_boundary = ridge_extent + ridge_step
         high_boundary = high_extent + high_step
         medium_boundary = medium_extent + medium_step
 
         abs_distance = abs(signed_distance)
-        if abs_distance < ridge_extent:
-            return min_step_multiplier  # 0.25 - finest resolution (ridge)
-        elif abs_distance < ridge_boundary:
-            return min_step_multiplier  # 0.25 - boundary sample (ridge into high)
-        elif abs_distance < high_extent:
-            return 0.5  # High resolution
+        if abs_distance < high_extent:
+            return min_step_multiplier  # 0.5 - finest resolution (high)
         elif abs_distance < high_boundary:
-            return 0.5  # High resolution - boundary sample (high into medium)
+            return min_step_multiplier  # 0.5 - boundary sample (high into medium)
         elif abs_distance < medium_extent:
             return 1.0  # Medium resolution
         elif abs_distance < medium_boundary:
@@ -535,9 +518,7 @@ for frame in range(start_frame, end_frame + 1):
             # Track statistics by resolution
             stats_by_direction['vertical']['total'] += 1
             if step_multiplier == min_step_multiplier:
-                stats_by_direction['vertical']['ridge'] += 1
-            elif step_multiplier == 0.5:
-                stats_by_direction['vertical']['high'] += 1
+                stats_by_direction['vertical']['high'] += 1  # 0.5× is now the finest
             elif step_multiplier == 1.0:
                 stats_by_direction['vertical']['medium'] += 1
             elif step_multiplier == max_step_multiplier:
@@ -571,7 +552,6 @@ print("-"*60)
 print(f"\nFile: ocean-points-data-vertical.json")
 print(f"  Total samples: {stats_by_direction['vertical']['total']}")
 print(f"  Samples per resolution:")
-print(f"    - Ridge (0.25× step):  {stats_by_direction['vertical']['ridge']:,}")
 print(f"    - High (0.5× step):    {stats_by_direction['vertical']['high']:,}")
 print(f"    - Medium (1.0× step):  {stats_by_direction['vertical']['medium']:,}")
 print(f"    - Low (2.0× step):     {stats_by_direction['vertical']['low']:,}")

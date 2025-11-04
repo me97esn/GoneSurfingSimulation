@@ -52,6 +52,7 @@ This should create a script that can be run in blender, that exports all of the 
 38. **FR-38**: The skipping of too steep samples from the vertical sampling still applies.
 39. **FR-39**: The ridge of higher resolution should be around 5 samples wide in the positive y direction, and 10 samples wide in the negative y direction. Then there should be around 5 rows of high samples in the negative y direction, and around two in the positive y direction. Then a few rows of medium resolution in both directions before low resolution is used. The goal of this is to get high resolution at the wave, but with as little data as possible while still keeping a high detail of the wave. The exact number of rows per resolution is not important, prioritise aligning them if another number makes it easier to align the samples without increasing the amount of data too much.
 40. **FR-40**: There are gaps when the sampling reduces resolution. Add an extra sample row of the higher resolution every time it transitions to a lower resolution. This boundary sample ensures smooth transitions and prevents gaps between different resolution zones.
+41. **FR-41**: Add another output file with low resolution only. All of the samples in this file should be made with the same, low, resolution.
 
 ### Non-Functional Requirements
 
@@ -183,3 +184,10 @@ This should create a script that can be run in blender, that exports all of the 
   - Horizontal steep sampling (x, -x, y, -y directions) only captures samples within boundary
   - Vertical sampling uses distance-based resolution (FR-35) and is not affected by boundary
   - This limits steep sample capture to relevant areas, reducing data size
+- FR-41 implemented: Uniform low resolution output file
+  - Added new output file `ocean-points-data-low_res_only.json`
+  - Samples entire surface with uniform low resolution (base_step * max_step_multiplier = 2.0×)
+  - Uses vertical ray casting from above with same filtering as other sampling (min_cos_trace)
+  - Scale calculated consistently with other samples: step_scale * normal_scale, clamped to max_scale
+  - Provides lightweight alternative dataset for performance-critical scenarios or distant rendering
+  - Statistics tracked separately showing total samples and low resolution count

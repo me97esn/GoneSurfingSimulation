@@ -42,7 +42,8 @@ frames_data_by_direction = {
     'x': [],
     '-x': [],
     'y': [],
-    '-y': []
+    '-y': [],
+    'low_res_only': []  # FR-41: Uniform low resolution file
 }
 
 # Statistics tracking (FR-10)
@@ -52,7 +53,8 @@ stats_by_direction = {
     'x': {'total': 0, 'steep': 0},
     '-x': {'total': 0, 'steep': 0},
     'y': {'total': 0, 'steep': 0},
-    '-y': {'total': 0, 'steep': 0}
+    '-y': {'total': 0, 'steep': 0},
+    'low_res_only': {'total': 0, 'low': 0}  # FR-41
 }
 total_samples_written = 0
 total_top_1_percent_samples = 0
@@ -200,6 +202,12 @@ for frame in range(start_frame, end_frame + 1):
             "Scales": []
         },
         '-y': {
+            "Name": f"Frame_{frame}",
+            "Positions": [],
+            "Normals": [],
+            "Scales": []
+        },
+        'low_res_only': {  # FR-41
             "Name": f"Frame_{frame}",
             "Positions": [],
             "Normals": [],
@@ -524,13 +532,62 @@ for frame in range(start_frame, end_frame + 1):
             elif step_multiplier == max_step_multiplier:
                 stats_by_direction['vertical']['low'] += 1
 
+    # FR-41: Low resolution only sampling - uniform low resolution across entire surface
+    frame_data = frame_data_by_direction['low_res_only']
+    low_res_step = base_step * max_step_multiplier  # Use max_step_multiplier for uniform low resolution
+
+    for x_idx in range(int(x_length / low_res_step) + 1):
+        for y_idx in range(int(y_length / low_res_step) + 1):
+            x_pos = start_trace_x + low_res_step * x_idx
+            y_pos = start_trace_y + low_res_step * y_idx
+
+            # Perform raycast
+            ray_begin = Vector((x_pos, y_pos, 100))
+            ray_end = Vector((x_pos, y_pos, -100))
+            ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
+            ray_direction = ray_end - ray_begin
+            ray_direction.normalize()
+            hit, location, normals, index = target_object.ray_cast(ray_begin_local, ray_direction)
+
+            if not hit:
+                continue
+
+            normals.normalize()
+
+            # FR-30: Skip samples too perpendicular to ray direction
+            cos_trace = abs(normals.dot(ray_direction))
+            if cos_trace < min_cos_trace:
+                continue
+
+            frame_data["Positions"].append({
+                "X": float(location.x),
+                "Y": float(location.y),
+                "Z": float(location.z)
+            })
+            frame_data["Normals"].append({
+                "X": float(normals.x),
+                "Y": float(normals.y),
+                "Z": float(normals.z)
+            })
+            # FR-37: Scale adjusted by both normal and step size
+            normal_scale = 1 / float(cos_trace) if cos_trace != 0 else max_scale
+            step_scale = max_step_multiplier
+            combined_scale = step_scale * normal_scale
+            combined_scale = min(combined_scale, max_scale)
+            frame_data["Scales"].append(combined_scale)
+            total_samples_written += 1
+
+            # Track statistics
+            stats_by_direction['low_res_only']['total'] += 1
+            stats_by_direction['low_res_only']['low'] += 1
+
     # FR-32: Append frame data for each direction
-    for direction in ['vertical', 'x', '-x', 'y', '-y']:
+    for direction in ['vertical', 'x', '-x', 'y', '-y', 'low_res_only']:
         frames_data_by_direction[direction].append(frame_data_by_direction[direction])
     print(f"Processed frame {frame}")
 
-# FR-32: Write separate output files for each direction
-for direction in ['vertical', 'x', '-x', 'y', '-y']:
+# FR-32, FR-41: Write separate output files for each direction
+for direction in ['vertical', 'x', '-x', 'y', '-y', 'low_res_only']:
     direction_filename = f"ocean-points-data-{direction}.json"
     output_filepath = os.path.join(output_directory, direction_filename)
     with open(output_filepath, "w") as file:
@@ -562,5 +619,11 @@ for direction in ['x', '-x', 'y', '-y']:
     print(f"  Total samples: {stats_by_direction[direction]['total']}")
     print(f"  Samples per resolution:")
     print(f"    - Steep samples (0.25× step): {stats_by_direction[direction]['steep']:,}")
+
+# FR-41: Low resolution only file statistics
+print(f"\nFile: ocean-points-data-low_res_only.json")
+print(f"  Total samples: {stats_by_direction['low_res_only']['total']}")
+print(f"  Samples per resolution:")
+print(f"    - Low resolution (2.0× step): {stats_by_direction['low_res_only']['low']:,}")
 
 print("\n" + "="*60)

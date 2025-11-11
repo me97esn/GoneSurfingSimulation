@@ -2,7 +2,7 @@
 
 while true; do
     echo "Starting Blender simulation..."
-    /snap/bin/blender --python run_simulation.py
+    /snap/bin/blender ../3dmodels/breaking_waves_beach_break_2.blend --python run_simulation.py
 
     exit_code=$?
 

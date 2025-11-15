@@ -46,7 +46,7 @@ To start the simulation emidiately, run the script `./run_simulation.sh`
 
 1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
 
-1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
+1. Open the file ./export_ocean_points.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
    1.Open a Text Editor view in Blender.
    1.Press Alt + O, or go to Text>Open Text Block and open the .py file
    1.Then simply press Run script :D

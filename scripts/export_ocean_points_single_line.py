@@ -5,17 +5,17 @@ from mathutils import Vector
 
 # Configuration
 target_object = bpy.data.objects['fluid_surface']
-start_frame = 752
-end_frame = 1325
+start_frame = 905
+end_frame = 1101
 scn = bpy.context.scene
 output_directory = "/hdd/gone_surfing_exports/medium_wave_left"
-output_filename = "ocean-points-data-simple.json"
+output_filename = "ocean-points-data-single-line.json"
 
 # Sampling configuration
 sample_x = 50.0  # Fixed x position to sample along
 start_y = -280
 end_y = 170
-step_size = 0.1  # High resolution step size
+step_size = 0.3  # High resolution step size
 
 # Maximum scale limit
 max_scale = 4

@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const flip_fluid_cache_folder = "/ssd3/flip_fluid_cache/";
-const source_folder_name = "flip_fluid_cache_5";
+const source_folder_name = "flip_fluid_cache_6";
 
 function runService({ fileName }) {
   return new Promise((resolve, reject) => {
@@ -26,8 +26,10 @@ async function run() {
 
   const source_folder = path.join(flip_fluid_cache_folder, source_folder_name);
   const bakefiles_folder = path.join(source_folder, "bakefiles");
-  const workers = {};
   const files = fs.readdirSync(bakefiles_folder);
+
+  // Sort files to process them in order
+  const filesToProcess = [];
   for (const fileName of files) {
     const match = fileName.match(/^(\d+).bobj/);
     if (match) {
@@ -36,20 +38,18 @@ async function run() {
       if (time < startFrame || time > endFrame) {
         continue;
       }
-      workers[time] = runService({ fileName });
-      console.log("running file ", fileName);
+      filesToProcess.push({ time, fileName });
     }
   }
-  await Promise.all(Object.values(workers));
-  const result = {};
-  for (const time in workers) {
-    const worker = await workers[time];
-    result[time] = worker.result;
-  }
-  for (const time in result) {
+  filesToProcess.sort((a, b) => a.time - b.time);
+
+  // Process files sequentially and write immediately to avoid memory buildup
+  for (const { time, fileName } of filesToProcess) {
+    console.log("running file ", fileName);
+    const worker = await runService({ fileName });
     const resultFileUri = path.join(resultFolder, `${time}.json`);
-    console.log(`Writing file ${resultFileUri}`);
-    fs.writeFileSync(resultFileUri, JSON.stringify(result[time]));
+    console.log(`done with ${fileName}, writing file ${resultFileUri}`);
+    fs.writeFileSync(resultFileUri, JSON.stringify(worker.result));
   }
 }
 

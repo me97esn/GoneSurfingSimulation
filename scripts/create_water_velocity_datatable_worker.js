@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const flip_fluid_cache_folder = "/ssd3/flip_fluid_cache/";
-const source_folder_name = "flip_fluid_cache_5";
+const source_folder_name = "flip_fluid_cache_6";
 
 const { workerData, parentPort } = require("worker_threads");
 const { fileName } = workerData;
@@ -71,6 +71,18 @@ for (let i = 0; i < numberOfVertices; i++) {
   result.dx.push(blur_x);
   result.dy.push(blur_y);
   result.dz.push(blur_z);
+
+  if(blur_x !== 0.0){
+    console.log('found blur data:', blur_x)
+  }
+  else if(blur_y !== 0.0){
+    console.log('found blur data:', blur_y)
+  }
+  else if(blur_z !== 0.0){
+    console.log('found blur data:', blur_z)
+  }else{
+    // console.log('no blur data found')
+  }
 
   // Wave height
   result.height.push(z);

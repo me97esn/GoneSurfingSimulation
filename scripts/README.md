@@ -33,32 +33,39 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 
 ## White water
 
-### Export white water particles from Blender
+### Export white water particles and convert to Niagara Datatable format
 
-1. Run `./open_simulation.sh`
-2. Set the start frame to the correct start frame (don't have to be 0) and the end frame to the same as in the wave animation export (868)
-3. Select the white water foam object
-4. Export as obj files. Settings:
-   - Selection only
-   - Object as Obj Objects
-   - Animation
-   - Forward: X Forward
-   - Up: Z Up
+Run the complete export script:
+```bash
+./export_white_water_complete.sh [start_frame] [end_frame]
+```
 
-### Convert to Niagara Datatable format (for Unreal Engine)
+**Examples**:
+```bash
+# Use defaults (frames 752-1325)
+./export_white_water_complete.sh
 
-1. Open the script `export_white_water_points.js`
-   - Make sure that the `dir` variable points to the folder containing the exported OBJ files
-   - Make sure that `startFrame` matches the frame number used in the export
-2. Run the script:
-   ```bash
-   node export_white_water_points.js [output_file_path]
-   ```
-   - If no output path is provided, the file will be saved as `white-water-points-data.json` in the source directory
-3. In UE4/UE5, import the JSON file as a datatable
-4. In UE4/UE5, configure your Niagara particle system to use the imported datatable
+# Export frames 752-1000
+./export_white_water_complete.sh 752 1000
+```
 
-**Note**: This script exports particle positions in the same format as `export_ocean_points.py` (WavePointsData format), making it compatible with Niagara systems that use this structure.
+This script will:
+1. Export white water particles from Blender as OBJ files
+2. Convert the OBJ files to Niagara Datatable format (creates 3 JSON files with different rotations)
+3. Output files to `/hdd/gone_surfing_exports/medium_wave_left/white_water/`
+
+The script runs Blender in background mode and automatically finds the white water foam object, so no manual interaction is required.
+
+**Advanced Configuration**: Edit `export_white_water_complete.sh` to change:
+- `OUTPUT_DIR` - Where to save the files (default: `/hdd/gone_surfing_exports/medium_wave_left/white_water`)
+- `BLEND_FILE` - Path to the .blend file (default: `../3dmodels/breaking_waves_beach_break_2.blend`)
+
+**Output files**:
+- `white-water-points-data-rotX.json` - Rotated 90° around X-axis
+- `white-water-points-data-rotY.json` - Rotated 90° around Y-axis
+- `white-water-points-data-rotZ.json` - Rotated 90° around Z-axis
+
+**Import to Unreal**: Import one of the JSON files as a datatable and configure your Niagara particle system to use it. The files are in WavePointsData format, compatible with Niagara systems.
 
 ## Water height
 

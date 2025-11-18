@@ -5,7 +5,7 @@
 run the script `./open_simulation.sh` to open blender with the simulation. This is needed for the generation of the water forces (blur files).
 Also click the flip fluids sidebar and the button about enabling blur data https://github.com/rlguy/Blender-FLIP-Fluids/wiki/Domain-Attributes-and-Data-Settings#motion-blur-rendering-automatic-setup.
 
-To start the simulation immediately, run the script `./run_simulation.sh`
+To start the simulation immediately, and make sure it restarts if it crashes, run the script `./run_simulation.sh`
 
 ## Export the wave animation (Alternative: Alembic, for use in desktop games)
 

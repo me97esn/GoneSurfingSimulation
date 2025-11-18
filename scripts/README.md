@@ -3,7 +3,9 @@
 ## Run the simulation
 
 run the script `./open_simulation.sh` to open blender with the simulation. This is needed for the generation of the water forces (blur files).
-To start the simulation emidiately, run the script `./run_simulation.sh`
+Also click the flip fluids sidebar and the button about enabling blur data https://github.com/rlguy/Blender-FLIP-Fluids/wiki/Domain-Attributes-and-Data-Settings#motion-blur-rendering-automatic-setup.
+
+To start the simulation immediately, run the script `./run_simulation.sh`
 
 ## Export the wave animation (Alternative: Alembic, for use in desktop games)
 
@@ -36,11 +38,13 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 ### Export white water particles and convert to Niagara Datatable format
 
 Run the complete export script:
+
 ```bash
 ./export_white_water_complete.sh [start_frame] [end_frame]
 ```
 
 **Examples**:
+
 ```bash
 # Use defaults (frames 752-1325)
 ./export_white_water_complete.sh
@@ -50,6 +54,7 @@ Run the complete export script:
 ```
 
 This script will:
+
 1. Export white water particles from Blender as OBJ files
 2. Convert the OBJ files to Niagara Datatable format (creates 3 JSON files with different rotations)
 3. Output files to `/hdd/gone_surfing_exports/medium_wave_left/white_water/`
@@ -57,10 +62,12 @@ This script will:
 The script runs Blender in background mode and automatically finds the white water foam object, so no manual interaction is required.
 
 **Advanced Configuration**: Edit `export_white_water_complete.sh` to change:
+
 - `OUTPUT_DIR` - Where to save the files (default: `/hdd/gone_surfing_exports/medium_wave_left/white_water`)
 - `BLEND_FILE` - Path to the .blend file (default: `../3dmodels/breaking_waves_beach_break_2.blend`)
 
 **Output files**:
+
 - `white-water-points-data-rotX.json` - Rotated 90° around X-axis
 - `white-water-points-data-rotY.json` - Rotated 90° around Y-axis
 - `white-water-points-data-rotZ.json` - Rotated 90° around Z-axis

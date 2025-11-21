@@ -14,3 +14,4 @@ FLIP_Fluids_addon_1.3.1_stable_(30_mar_2022).zip filter=lfs diff=lfs merge=lfs -
 3dmodels/breaking_waves_beach_break_2.blend filter=lfs diff=lfs merge=lfs -text
 3dmodels/breaking_waves_beach_break_2.blend1 filter=lfs diff=lfs merge=lfs -text
 3dmodels/breaking_waves_flip_fluid.blend filter=lfs diff=lfs merge=lfs -text
+3dmodels/breaking_waves_beach_break_2_with_modifiers.blend filter=lfs diff=lfs merge=lfs -text

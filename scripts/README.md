@@ -22,7 +22,7 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 
 1. From blender, open the file breaking_waves_beach_break_2_water_display.blend.
 2. Make sure that the bottom side of the simulation is completely flat. There should be a boolean modifier that cuts off the bottom of the water mesh.
-3. Add a decimate modifier to reduce the polycount. A decimate ratio of 0.005 was used for the epic resolution.
+3. Add a decimate modifier to reduce the polycount. A decimate ratio of 0.05 was used for the epic resolution.
 4. Export the anmitation as obj, animation.
 5. In UE, import the meshes. Then use the button in the MeshArrayActor to load the meshes inte the Niagara system.
 

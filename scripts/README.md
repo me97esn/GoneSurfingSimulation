@@ -49,8 +49,7 @@ Run the complete export script:
 # Use defaults (frames 752-1325)
 ./export_white_water_complete.sh
 
-# Export frames 752-1000
-./export_white_water_complete.sh 752 1000
+./export_white_water_complete.sh 886 1078
 ```
 
 This script will:

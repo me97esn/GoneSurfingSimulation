@@ -109,7 +109,7 @@ echo "STEP 2: Converting to Unreal Niagara Datatable format..."
 echo "------------------------------------------------------------"
 
 cd "$SCRIPT_DIR"
-node export_white_water_points.js
+node export_white_water_points.js $START_FRAME $END_FRAME
 
 if [ $? -ne 0 ]; then
     echo "ERROR: Conversion to Unreal format failed!"

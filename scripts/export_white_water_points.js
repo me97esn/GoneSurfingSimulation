@@ -5,7 +5,17 @@ const path = require("path");
 // const dir = 'D:\\gone_surfing_exports\\medium_wave_left\\white_water'
 const dir = "/hdd/gone_surfing_exports/medium_wave_left/white_water";
 
-const startFrame = 752;
+// Parse command-line arguments for start and end frame
+// Usage: node export_white_water_points.js [start_frame] [end_frame]
+const args = process.argv.slice(2);
+const startFrame = args[0] ? parseInt(args[0]) : 752;
+const endFrame = args[1] ? parseInt(args[1]) : null; // null means process all files
+
+console.log(`Start frame: ${startFrame}`);
+if (endFrame) {
+  console.log(`End frame: ${endFrame}`);
+}
+
 const rotationDegrees = 90; // 90 degrees rotation for each axis
 const rotationRadians = (rotationDegrees * Math.PI) / 180;
 
@@ -48,124 +58,130 @@ const framesX = [];
 const framesY = [];
 const framesZ = [];
 
-// Get command line arguments
-const [, , resultFileURI] = process.argv;
-
 // Read and sort files by creation time
-const files = fs
+const allFiles = fs
   .readdirSync(dir)
+  .filter(f => f.match(/.*\.obj$/))
   .sort((a, b) =>
     fs.statSync(path.join(dir, a)).ctime > fs.statSync(path.join(dir, b)).ctime ? 1 : -1
   );
 
-console.log(`Processing ${files.length} files...`);
+// Filter files by frame range
+const files = allFiles.filter(fileName => {
+  const match = fileName.match(/(\d+)\./);
+  if (!match) return false;
+  const frameNumber = parseInt(match[1]);
+  if (frameNumber < startFrame) return false;
+  if (endFrame && frameNumber > endFrame) return false;
+  return true;
+});
+
+console.log(`Processing ${files.length} files (of ${allFiles.length} total)...`);
 console.log(`Creating 3 output files, each rotated ${rotationDegrees}° around a single axis (X, Y, or Z)\n`);
 
 // Process each OBJ file
 for (const fileName of files) {
-  if (fileName.match(/.*obj/)) {
-    // Extract frame number from filename
-    const [timeStr] = fileName.match(/(\d+)\./g);
-    const frameNumber = parseInt(timeStr);
+  // Extract frame number from filename
+  const [timeStr] = fileName.match(/(\d+)\./g);
+  const frameNumber = parseInt(timeStr);
 
-    console.log(`Processing ${fileName} (Frame ${frameNumber})...`);
+  console.log(`Processing ${fileName} (Frame ${frameNumber})...`);
 
-    // Read OBJ file content
-    const content = fs.readFileSync(path.join(dir, fileName), {
-      encoding: "utf8",
-      flag: "r",
-    });
+  // Read OBJ file content
+  const content = fs.readFileSync(path.join(dir, fileName), {
+    encoding: "utf8",
+    flag: "r",
+  });
 
-    // Parse vertices from OBJ file - create separate position arrays for each rotation
-    const positionsX = [];
-    const positionsY = [];
-    const positionsZ = [];
-    const lines = content.split("\n");
+  // Parse vertices from OBJ file - create separate position arrays for each rotation
+  const positionsX = [];
+  const positionsY = [];
+  const positionsZ = [];
+  const lines = content.split("\n");
 
-    // Debug: track first vertex for rotation verification
-    let firstVertex = null;
-    let firstVertexX = null;
-    let firstVertexY = null;
-    let firstVertexZ = null;
+  // Debug: track first vertex for rotation verification
+  let firstVertex = null;
+  let firstVertexX = null;
+  let firstVertexY = null;
+  let firstVertexZ = null;
 
-    for (const line of lines) {
-      // Check if line contains vertex data (starts with "v ")
-      if (line.match(/^v /)) {
-        const [, x, y, z] = line.split(" ");
-        const xNum = parseFloat(x);
-        const yNum = parseFloat(y);
-        const zNum = parseFloat(z);
+  for (const line of lines) {
+    // Check if line contains vertex data (starts with "v ")
+    if (line.match(/^v /)) {
+      const [, x, y, z] = line.split(" ");
+      const xNum = parseFloat(x);
+      const yNum = parseFloat(y);
+      const zNum = parseFloat(z);
 
-        // Apply rotation around X-axis
-        const rotatedX = rotateAroundX(xNum, yNum, zNum, rotationRadians);
-        positionsX.push({
-          X: rotatedX.x,
-          Y: rotatedX.y,
-          Z: rotatedX.z
-        });
+      // Apply rotation around X-axis
+      const rotatedX = rotateAroundX(xNum, yNum, zNum, rotationRadians);
+      positionsX.push({
+        X: rotatedX.x,
+        Y: rotatedX.y,
+        Z: rotatedX.z
+      });
 
-        // Apply rotation around Y-axis
-        const rotatedY = rotateAroundY(xNum, yNum, zNum, rotationRadians);
-        positionsY.push({
-          X: rotatedY.x,
-          Y: rotatedY.y,
-          Z: rotatedY.z
-        });
+      // Apply rotation around Y-axis
+      const rotatedY = rotateAroundY(xNum, yNum, zNum, rotationRadians);
+      positionsY.push({
+        X: rotatedY.x,
+        Y: rotatedY.y,
+        Z: rotatedY.z
+      });
 
-        // Apply rotation around Z-axis
-        const rotatedZ = rotateAroundZ(xNum, yNum, zNum, rotationRadians);
-        positionsZ.push({
-          X: rotatedZ.x,
-          Y: rotatedZ.y,
-          Z: rotatedZ.z
-        });
+      // Apply rotation around Z-axis
+      const rotatedZ = rotateAroundZ(xNum, yNum, zNum, rotationRadians);
+      positionsZ.push({
+        X: rotatedZ.x,
+        Y: rotatedZ.y,
+        Z: rotatedZ.z
+      });
 
-        // Debug: capture first vertex for logging
-        if (!firstVertex) {
-          firstVertex = { x: xNum, y: yNum, z: zNum };
-          firstVertexX = rotatedX;
-          firstVertexY = rotatedY;
-          firstVertexZ = rotatedZ;
-        }
+      // Debug: capture first vertex for logging
+      if (!firstVertex) {
+        firstVertex = { x: xNum, y: yNum, z: zNum };
+        firstVertexX = rotatedX;
+        firstVertexY = rotatedY;
+        firstVertexZ = rotatedZ;
       }
     }
-
-    // Debug output for first vertex of first frame
-    if (firstVertex && frameNumber === startFrame) {
-      console.log(`  First vertex ORIGINAL: (${firstVertex.x.toFixed(3)}, ${firstVertex.y.toFixed(3)}, ${firstVertex.z.toFixed(3)})`);
-      console.log(`  After X-axis rotation:  (${firstVertexX.x.toFixed(3)}, ${firstVertexX.y.toFixed(3)}, ${firstVertexX.z.toFixed(3)})`);
-      console.log(`  After Y-axis rotation:  (${firstVertexY.x.toFixed(3)}, ${firstVertexY.y.toFixed(3)}, ${firstVertexY.z.toFixed(3)})`);
-      console.log(`  After Z-axis rotation:  (${firstVertexZ.x.toFixed(3)}, ${firstVertexZ.y.toFixed(3)}, ${firstVertexZ.z.toFixed(3)})`);
-    }
-
-    // Create frame data in WavePointsData format for each rotation
-    framesX.push({
-      Name: `Frame_${frameNumber}`,
-      Positions: positionsX,
-      Normals: [],
-      Scales: []
-    });
-
-    framesY.push({
-      Name: `Frame_${frameNumber}`,
-      Positions: positionsY,
-      Normals: [],
-      Scales: []
-    });
-
-    framesZ.push({
-      Name: `Frame_${frameNumber}`,
-      Positions: positionsZ,
-      Normals: [],
-      Scales: []
-    });
-
-    console.log(`  Particles in frame: ${positionsX.length}`);
   }
+
+  // Debug output for first vertex of first frame
+  if (firstVertex && frameNumber === startFrame) {
+    console.log(`  First vertex ORIGINAL: (${firstVertex.x.toFixed(3)}, ${firstVertex.y.toFixed(3)}, ${firstVertex.z.toFixed(3)})`);
+    console.log(`  After X-axis rotation:  (${firstVertexX.x.toFixed(3)}, ${firstVertexX.y.toFixed(3)}, ${firstVertexX.z.toFixed(3)})`);
+    console.log(`  After Y-axis rotation:  (${firstVertexY.x.toFixed(3)}, ${firstVertexY.y.toFixed(3)}, ${firstVertexY.z.toFixed(3)})`);
+    console.log(`  After Z-axis rotation:  (${firstVertexZ.x.toFixed(3)}, ${firstVertexZ.y.toFixed(3)}, ${firstVertexZ.z.toFixed(3)})`);
+  }
+
+  // Create frame data in WavePointsData format for each rotation
+  framesX.push({
+    Name: `Frame_${frameNumber}`,
+    Positions: positionsX,
+    Normals: [],
+    Scales: []
+  });
+
+  framesY.push({
+    Name: `Frame_${frameNumber}`,
+    Positions: positionsY,
+    Normals: [],
+    Scales: []
+  });
+
+  framesZ.push({
+    Name: `Frame_${frameNumber}`,
+    Positions: positionsZ,
+    Normals: [],
+    Scales: []
+  });
+
+  console.log(`  Particles in frame: ${positionsX.length}`);
 }
 
 // Write three separate output files
-const baseOutputPath = resultFileURI || path.join(dir, "white-water-points-data");
+const baseOutputPath = path.join(dir, "white-water-points-data");
 
 const outputPathX = `${baseOutputPath}-rotX.json`;
 const outputPathY = `${baseOutputPath}-rotY.json`;

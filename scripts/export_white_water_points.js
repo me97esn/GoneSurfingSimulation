@@ -58,23 +58,25 @@ const framesX = [];
 const framesY = [];
 const framesZ = [];
 
-// Read and sort files by creation time
+// Read, filter, and sort files by frame number (not creation time)
 const allFiles = fs
   .readdirSync(dir)
-  .filter(f => f.match(/.*\.obj$/))
-  .sort((a, b) =>
-    fs.statSync(path.join(dir, a)).ctime > fs.statSync(path.join(dir, b)).ctime ? 1 : -1
-  );
+  .filter(f => f.match(/.*\.obj$/));
 
-// Filter files by frame range
-const files = allFiles.filter(fileName => {
-  const match = fileName.match(/(\d+)\./);
-  if (!match) return false;
-  const frameNumber = parseInt(match[1]);
-  if (frameNumber < startFrame) return false;
-  if (endFrame && frameNumber > endFrame) return false;
-  return true;
-});
+// Filter files by frame range and sort by frame number
+const files = allFiles
+  .map(fileName => {
+    const match = fileName.match(/(\d+)\./);
+    return match ? { fileName, frameNumber: parseInt(match[1]) } : null;
+  })
+  .filter(item => {
+    if (!item) return false;
+    if (item.frameNumber < startFrame) return false;
+    if (endFrame && item.frameNumber > endFrame) return false;
+    return true;
+  })
+  .sort((a, b) => a.frameNumber - b.frameNumber)
+  .map(item => item.fileName);
 
 console.log(`Processing ${files.length} files (of ${allFiles.length} total)...`);
 console.log(`Creating 3 output files, each rotated ${rotationDegrees}° around a single axis (X, Y, or Z)\n`);

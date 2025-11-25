@@ -21,6 +21,8 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 8. **FR-8**: It should repeat **FR-7** again multiple times, with ratio decreasing 0.01 each time down to 0.01
 9. **FR-9**: It should update the readme, the part about "Export the wave animation (Alternative stop motion meshes for use in mobile games)", with info about how to run the script.
 10. **FR-10**: The mesh chunks shall use fixed world coordinates across all frames. The chunk boundaries must be calculated once from the start_frame's bounding box and then reused for all subsequent frames, ensuring that each chunk (e.g., 0_0, 0_1, etc.) represents the same spatial region in every frame.
+11. **FR-11**: The chunks shall have straight edges created by using plane bisection operations, ensuring clean rectangular boundaries instead of jagged edges following vertex positions.
+12. **FR-12**: Only export faces with normals facing upwards or sideways. Faces with normals pointing downwards (negative Z component) shall be removed from the exported mesh, as only the visible upper surface is needed.
 
 ### Non-Functional Requirements
 
@@ -99,6 +101,19 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 - Boundaries stored and reused for all subsequent frames
 - Ensures each chunk (0_0, 0_1, etc.) represents same spatial region in every frame
 - Critical for Unreal Engine's Niagara system and MeshArrayActor consistency
+
+### FR-11 Implementation (Straight edges):
+- Uses `bmesh.ops.bisect_plane()` to cut mesh at exact chunk boundaries
+- Creates 4 bisect planes per chunk (min/max on primary and secondary axes)
+- `clear_outer=True` removes geometry outside the boundary
+- Results in perfectly rectangular chunks with straight edges
+
+### FR-12 Implementation (Remove downward-facing faces):
+- Calculates face normals using `bm.normal_update()`
+- Identifies faces where `normal.z < 0` (pointing downward)
+- Removes downward-facing faces using `bmesh.ops.delete()`
+- Reduces file size and improves rendering by only exporting visible upper surface
+- Logs count of removed faces per chunk for visibility
 
 ### Script Features:
 - **Fully automated**: Runs in Blender background mode, no GUI interaction

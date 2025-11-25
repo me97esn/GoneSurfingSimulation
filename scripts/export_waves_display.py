@@ -191,21 +191,65 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             s_start = secondary_min + j * chunk_secondary
             s_end = secondary_min + (j + 1) * chunk_secondary
 
-            # Create a new mesh with only vertices in this chunk
+            # Create bounding box planes for this chunk
+            # We'll use bisect to create clean straight edges
             bm = bmesh.new()
             bm.from_mesh(final_obj.data)
 
-            # Remove vertices outside this chunk
-            verts_to_remove = []
-            for v in bm.verts:
-                vert_world = final_obj.matrix_world @ v.co
-                primary_coord = vert_world[primary_idx]
-                secondary_coord = vert_world[secondary_idx]
+            # Apply world transform to bmesh
+            bm.transform(final_obj.matrix_world)
 
-                if not (p_start <= primary_coord <= p_end and s_start <= secondary_coord <= s_end):
-                    verts_to_remove.append(v)
+            # Create plane normals and points for bisecting
+            # Bisect along primary axis (min)
+            plane_no_p_min = Vector([0, 0, 0])
+            plane_no_p_min[primary_idx] = 1.0
+            plane_co_p_min = Vector([0, 0, 0])
+            plane_co_p_min[primary_idx] = p_start
 
-            bmesh.ops.delete(bm, geom=verts_to_remove, context='VERTS')
+            # Bisect along primary axis (max)
+            plane_no_p_max = Vector([0, 0, 0])
+            plane_no_p_max[primary_idx] = -1.0
+            plane_co_p_max = Vector([0, 0, 0])
+            plane_co_p_max[primary_idx] = p_end
+
+            # Bisect along secondary axis (min)
+            plane_no_s_min = Vector([0, 0, 0])
+            plane_no_s_min[secondary_idx] = 1.0
+            plane_co_s_min = Vector([0, 0, 0])
+            plane_co_s_min[secondary_idx] = s_start
+
+            # Bisect along secondary axis (max)
+            plane_no_s_max = Vector([0, 0, 0])
+            plane_no_s_max[secondary_idx] = -1.0
+            plane_co_s_max = Vector([0, 0, 0])
+            plane_co_s_max[secondary_idx] = s_end
+
+            # FR-11: Perform bisect operations to cut the mesh at chunk boundaries
+            # This creates clean straight edges
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                                   plane_co=plane_co_p_min, plane_no=plane_no_p_min, clear_outer=True)
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                                   plane_co=plane_co_p_max, plane_no=plane_no_p_max, clear_outer=True)
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                                   plane_co=plane_co_s_min, plane_no=plane_no_s_min, clear_outer=True)
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
+                                   plane_co=plane_co_s_max, plane_no=plane_no_s_max, clear_outer=True)
+
+            # FR-12: Remove downward-facing faces (faces with normal.z < 0)
+            # Ensure normals are calculated
+            bm.normal_update()
+
+            # Find faces with downward-pointing normals
+            faces_to_remove = []
+            for face in bm.faces:
+                # Check if face normal points downward (negative Z component)
+                if face.normal.z < 0:
+                    faces_to_remove.append(face)
+
+            # Remove downward-facing faces
+            bmesh.ops.delete(bm, geom=faces_to_remove, context='FACES')
+
+            print(f"    Chunk ({i},{j}): Removed {len(faces_to_remove)} downward-facing faces")
 
             # Create chunk mesh
             chunk_mesh = bpy.data.meshes.new(f"chunk_{i}_{j}_{frame}")

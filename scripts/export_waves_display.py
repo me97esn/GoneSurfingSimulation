@@ -33,8 +33,8 @@ print(f"Quality levels (decimate ratios): {quality_levels}")
 print(f"="*60)
 
 # Configuration
-CHUNKS_X = 3  # Split 3 times along longest axis
-CHUNKS_Y = 8  # Split 8 times along second longest axis
+CHUNKS_X = 8  # Split 8 times along longest axis
+CHUNKS_Y = 3  # Split 3 times along second longest axis
 FLUID_SURFACE_NAME = 'fluid_surface'
 BOOL_BOUNDARY_NAME = 'BoolBoundary'
 

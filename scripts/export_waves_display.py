@@ -185,6 +185,39 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     print(f"  Current mesh bounds: min={bounds['min']}, max={bounds['max']}")
     print(f"  Mesh world matrix: {final_obj.matrix_world}")
 
+    # FR-12: Remove downward-facing faces from the FULL mesh before chunking
+    # This ensures consistent normals across all chunks
+    print(f"  FR-12: Recalculating normals and removing downward-facing faces on full mesh")
+    bm_full = bmesh.new()
+    bm_full.from_mesh(final_obj.data)
+
+    # Recalculate normals to ensure they're correct
+    bmesh.ops.recalc_face_normals(bm_full, faces=bm_full.faces)
+    bm_full.normal_update()
+
+    # Count faces before removal
+    total_faces_before = len(bm_full.faces)
+
+    # Find faces with downward-pointing normals
+    faces_to_remove = []
+    for face in bm_full.faces:
+        # Check if face normal points downward (negative Z component)
+        if face.normal.z < 0:
+            faces_to_remove.append(face)
+
+    # Remove downward-facing faces
+    bmesh.ops.delete(bm_full, geom=faces_to_remove, context='FACES')
+
+    # Count faces after removal
+    total_faces_after = len(bm_full.faces)
+
+    print(f"  Removed {len(faces_to_remove)} downward-facing faces from full mesh (before: {total_faces_before}, after: {total_faces_after})")
+
+    # Update the mesh with cleaned geometry
+    bm_full.to_mesh(final_obj.data)
+    bm_full.free()
+    final_obj.data.update()
+
     # Export each chunk
     os.makedirs(output_dir, exist_ok=True)
 
@@ -252,29 +285,6 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
                                    plane_co=plane_co_s_max, plane_no=plane_no_s_max, clear_outer=True)
             print(f"    Chunk ({i},{j}): After secondary max bisect: faces={len(bm.faces)}, verts={len(bm.verts)}")
-
-            # FR-12: Remove downward-facing faces (faces with normal.z < 0)
-            # Recalculate normals to ensure they're correct after bisect operations
-            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-            bm.normal_update()
-
-            # Count faces before removal
-            total_faces_before = len(bm.faces)
-
-            # Find faces with downward-pointing normals
-            faces_to_remove = []
-            for face in bm.faces:
-                # Check if face normal points downward (negative Z component)
-                if face.normal.z < 0:
-                    faces_to_remove.append(face)
-
-            # Remove downward-facing faces
-            bmesh.ops.delete(bm, geom=faces_to_remove, context='FACES')
-
-            # Count faces after removal
-            total_faces_after = len(bm.faces)
-
-            print(f"    Chunk ({i},{j}): Removed {len(faces_to_remove)} downward-facing faces (before: {total_faces_before}, after: {total_faces_after})")
 
             # Create chunk mesh
             chunk_mesh = bpy.data.meshes.new(f"chunk_{i}_{j}_{frame}")

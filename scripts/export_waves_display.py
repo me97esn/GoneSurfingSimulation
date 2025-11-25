@@ -180,6 +180,11 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     chunk_primary = fixed_chunk_bounds['chunk_primary']
     chunk_secondary = fixed_chunk_bounds['chunk_secondary']
 
+    # Debug: Show actual mesh bounds vs fixed chunk boundaries
+    print(f"  Fixed chunk boundaries: primary [{primary_min:.2f}, {primary_max:.2f}], secondary [{secondary_min:.2f}, {secondary_max:.2f}]")
+    print(f"  Current mesh bounds: min={bounds['min']}, max={bounds['max']}")
+    print(f"  Mesh world matrix: {final_obj.matrix_world}")
+
     # Export each chunk
     os.makedirs(output_dir, exist_ok=True)
 
@@ -199,45 +204,62 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             # Apply world transform to bmesh
             bm.transform(final_obj.matrix_world)
 
+            print(f"    Chunk ({i},{j}): Initial faces: {len(bm.faces)}, verts: {len(bm.verts)}")
+
             # Create plane normals and points for bisecting
-            # Bisect along primary axis (min)
+            # For min boundaries: normal points inward (positive direction), keeps geometry >= p_start
+            # For max boundaries: normal points inward (negative direction), keeps geometry <= p_end
+
+            # Bisect along primary axis (min) - keep everything >= p_start
             plane_no_p_min = Vector([0, 0, 0])
-            plane_no_p_min[primary_idx] = 1.0
+            plane_no_p_min[primary_idx] = -1.0  # Normal points in negative direction, clear_outer removes < p_start
             plane_co_p_min = Vector([0, 0, 0])
             plane_co_p_min[primary_idx] = p_start
 
-            # Bisect along primary axis (max)
+            # Bisect along primary axis (max) - keep everything <= p_end
             plane_no_p_max = Vector([0, 0, 0])
-            plane_no_p_max[primary_idx] = -1.0
+            plane_no_p_max[primary_idx] = 1.0  # Normal points in positive direction, clear_outer removes > p_end
             plane_co_p_max = Vector([0, 0, 0])
             plane_co_p_max[primary_idx] = p_end
 
-            # Bisect along secondary axis (min)
+            # Bisect along secondary axis (min) - keep everything >= s_start
             plane_no_s_min = Vector([0, 0, 0])
-            plane_no_s_min[secondary_idx] = 1.0
+            plane_no_s_min[secondary_idx] = -1.0
             plane_co_s_min = Vector([0, 0, 0])
             plane_co_s_min[secondary_idx] = s_start
 
-            # Bisect along secondary axis (max)
+            # Bisect along secondary axis (max) - keep everything <= s_end
             plane_no_s_max = Vector([0, 0, 0])
-            plane_no_s_max[secondary_idx] = -1.0
+            plane_no_s_max[secondary_idx] = 1.0
             plane_co_s_max = Vector([0, 0, 0])
             plane_co_s_max[secondary_idx] = s_end
 
             # FR-11: Perform bisect operations to cut the mesh at chunk boundaries
             # This creates clean straight edges
+            print(f"    Chunk ({i},{j}): Bisecting primary min at {p_start:.2f}")
             bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
                                    plane_co=plane_co_p_min, plane_no=plane_no_p_min, clear_outer=True)
+            print(f"    Chunk ({i},{j}): After primary min bisect: faces={len(bm.faces)}, verts={len(bm.verts)}")
+
             bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
                                    plane_co=plane_co_p_max, plane_no=plane_no_p_max, clear_outer=True)
+            print(f"    Chunk ({i},{j}): After primary max bisect: faces={len(bm.faces)}, verts={len(bm.verts)}")
+
             bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
                                    plane_co=plane_co_s_min, plane_no=plane_no_s_min, clear_outer=True)
+            print(f"    Chunk ({i},{j}): After secondary min bisect: faces={len(bm.faces)}, verts={len(bm.verts)}")
+
             bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
                                    plane_co=plane_co_s_max, plane_no=plane_no_s_max, clear_outer=True)
+            print(f"    Chunk ({i},{j}): After secondary max bisect: faces={len(bm.faces)}, verts={len(bm.verts)}")
 
             # FR-12: Remove downward-facing faces (faces with normal.z < 0)
-            # Ensure normals are calculated
+            # Recalculate normals to ensure they're correct after bisect operations
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
             bm.normal_update()
+
+            # Count faces before removal
+            total_faces_before = len(bm.faces)
 
             # Find faces with downward-pointing normals
             faces_to_remove = []
@@ -249,7 +271,10 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             # Remove downward-facing faces
             bmesh.ops.delete(bm, geom=faces_to_remove, context='FACES')
 
-            print(f"    Chunk ({i},{j}): Removed {len(faces_to_remove)} downward-facing faces")
+            # Count faces after removal
+            total_faces_after = len(bm.faces)
+
+            print(f"    Chunk ({i},{j}): Removed {len(faces_to_remove)} downward-facing faces (before: {total_faces_before}, after: {total_faces_after})")
 
             # Create chunk mesh
             chunk_mesh = bpy.data.meshes.new(f"chunk_{i}_{j}_{frame}")

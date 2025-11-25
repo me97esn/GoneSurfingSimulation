@@ -40,7 +40,7 @@ Run the automated export script:
 ```
 
 This script will:
-1. Load the Blender file `breaking_waves_beach_break_2_water_display.blend` in background mode
+1. Load the Blender file `breaking_waves_beach_break_2.blend` in background mode
 2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
 3. Apply decimate modifiers at multiple quality levels (ratios: 0.05, 0.04, 0.03, 0.02, 0.01)
 4. Split each frame into 24 chunks (3x8 grid along the longest axes)

@@ -16,7 +16,7 @@
 set -e  # Exit on error
 
 # Configuration
-BLEND_FILE="../3dmodels/breaking_waves_beach_break_2_water_display.blend"
+BLEND_FILE="../3dmodels/breaking_waves_beach_break_2.blend"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="$SCRIPT_DIR/export_waves_display.py"
 

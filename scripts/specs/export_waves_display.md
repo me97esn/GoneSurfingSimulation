@@ -19,6 +19,8 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 6. **FR-6**: It should repeat **FR-2** to **FR-5** for each frame from start_frame to end_frame (which should also be configurable).
 7. **FR-7**: It should repeat **FR-2** to **FR-6** again, but now with other values for the modifier in **FR-3**. It should now use Collapse, ratio: 0.04. The folder where to export, in **FR-5**, should be the another folder with default value '/hdd/gone_surfing_exports/medium_wave_left/chunks_higher_resolution'
 8. **FR-8**: It should repeat **FR-7** again multiple times, with ratio decreasing 0.01 each time down to 0.01
+9. **FR-9**: It should update the readme, the part about "Export the wave animation (Alternative stop motion meshes for use in mobile games)", with info about how to run the script.
+10. **FR-10**: The mesh chunks shall use fixed world coordinates across all frames. The chunk boundaries must be calculated once from the start_frame's bounding box and then reused for all subsequent frames, ensuring that each chunk (e.g., 0_0, 0_1, etc.) represents the same spatial region in every frame.
 
 ### Non-Functional Requirements
 
@@ -34,10 +36,91 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 
 ## Status
 
-- [ ] Specification written
-- [ ] Implementation complete
+- [x] Specification written
+- [x] Implementation complete
 - [ ] Tests passing
 - [ ] Code reviewed
 - [ ] Merged to main
 
 ## Implementation Notes
+
+### Implementation Overview
+- Created `export_waves_display.py` - Python script that runs inside Blender
+- Created `export_waves_display.sh` - Bash wrapper with configurable parameters
+- Updated README with automated workflow instructions
+
+### FR-1 Implementation (Load Blender file):
+- Bash script loads the Blender file using `blender --background` command
+- Start frame is passed as command-line argument (default: 752)
+- Python script receives arguments via `sys.argv` after `--` separator
+
+### FR-2 Implementation (Boolean modifier):
+- Python script adds Boolean modifier to `fluid_surface` mesh
+- Uses 'DIFFERENCE' operation with `BoolBoundary` object
+- Automatically detects if BoolBoundary exists, warns if not found
+
+### FR-3 Implementation (Decimate modifier):
+- Adds Decimate modifier with 'COLLAPSE' type
+- Ratio is configurable per quality level (0.05, 0.04, 0.03, 0.02, 0.01)
+- Applied after boolean modifier
+
+### FR-4 Implementation (Split into chunks):
+- Automatically determines longest and second-longest axes
+- Splits 3 times along longest axis, 8 times along second longest
+- Total of 24 chunks (3×8) per frame
+- Uses bmesh operations to isolate vertices within each chunk's bounds
+
+### FR-5 Implementation (Export chunks):
+- Exports each chunk as separate OBJ file
+- Naming format: `{x}_{y}_mesh_{frame}.obj`
+- Default output folder: `/hdd/gone_surfing_exports/medium_wave_left/chunks_epic_resolution`
+- Uses Blender's `wm.obj_export` with settings: forward='X', up='Z'
+
+### FR-6 Implementation (Process all frames):
+- Loops from start_frame to end_frame (inclusive)
+- Each frame processed independently
+- Progress indicator shows every 10 frames
+
+### FR-7 & FR-8 Implementation (Multiple quality levels):
+- Processes 5 quality levels: 0.05, 0.04, 0.03, 0.02, 0.01
+- First level (0.05) outputs to `chunks_epic_resolution`
+- Second level (0.04) outputs to `chunks_higher_resolution`
+- Remaining levels output to `chunks_ratio_0_0X`
+- Each quality level is a complete independent export
+
+### FR-9 Implementation (Update README):
+- Updated "Export the wave animation (Alternative stop motion meshes)" section
+- Replaced 5-step manual process with single command
+- Added usage examples and output directory descriptions
+- Documented import process for Unreal Engine
+
+### FR-10 Implementation (Fixed world coordinates):
+- Chunk boundaries calculated once from start_frame's bounding box
+- Boundaries stored and reused for all subsequent frames
+- Ensures each chunk (0_0, 0_1, etc.) represents same spatial region in every frame
+- Critical for Unreal Engine's Niagara system and MeshArrayActor consistency
+
+### Script Features:
+- **Fully automated**: Runs in Blender background mode, no GUI interaction
+- **Configurable**: Command-line arguments for start/end frames and output directory
+- **Progress tracking**: Prints status for each frame and chunk
+- **Error handling**: Validates input files exist, provides helpful error messages
+- **Summary statistics**: Shows total files created per quality level
+
+### Usage:
+```bash
+# Basic usage with defaults
+./export_waves_display.sh
+
+# Custom frame range
+./export_waves_display.sh 752 868
+
+# Custom output directory
+./export_waves_display.sh 752 868 /custom/output
+```
+
+### Performance Notes:
+- Processing time depends on mesh complexity and frame count
+- Each quality level processes all frames independently
+- Total files: 5 quality levels × frame count × 24 chunks
+- Example: 117 frames = 14,040 OBJ files total

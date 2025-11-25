@@ -20,11 +20,45 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 
 ## Export the wave animation (Alternative stop motion meshes for use in mobile games)
 
-1. From blender, open the file breaking_waves_beach_break_2_water_display.blend.
-2. Make sure that the bottom side of the simulation is completely flat. There should be a boolean modifier that cuts off the bottom of the water mesh.
-3. Add a decimate modifier to reduce the polycount. A decimate ratio of 0.05 was used for the epic resolution.
-4. Export the anmitation as obj, animation.
-5. In UE, import the meshes. Then use the button in the MeshArrayActor to load the meshes inte the Niagara system.
+Run the automated export script:
+
+```bash
+./export_waves_display.sh [start_frame] [end_frame] [output_dir]
+```
+
+**Examples**:
+
+```bash
+# Use defaults (frames 752-868)
+./export_waves_display.sh
+
+# Custom frame range
+./export_waves_display.sh 752 868
+
+# Custom frame range and output directory
+./export_waves_display.sh 752 868 /hdd/exports
+```
+
+This script will:
+1. Load the Blender file `breaking_waves_beach_break_2_water_display.blend` in background mode
+2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
+3. Apply decimate modifiers at multiple quality levels (ratios: 0.05, 0.04, 0.03, 0.02, 0.01)
+4. Split each frame into 24 chunks (3x8 grid along the longest axes)
+5. Export each chunk as an OBJ file with naming: `{x}_{y}_mesh_{frame}.obj`
+
+**Output directories** (created automatically):
+- `chunks_epic_resolution` - Decimate ratio 0.05 (highest quality)
+- `chunks_higher_resolution` - Decimate ratio 0.04
+- `chunks_ratio_0_03` - Decimate ratio 0.03
+- `chunks_ratio_0_02` - Decimate ratio 0.02
+- `chunks_ratio_0_01` - Decimate ratio 0.01 (lowest quality, smallest file size)
+
+**Import to Unreal Engine**:
+1. Choose a quality level directory based on your performance needs
+2. Import the OBJ meshes from that directory
+3. Use the MeshArrayActor button to load the meshes into the Niagara system
+
+The script runs fully automated in Blender's background mode, so no manual interaction is required.
 
 ## Import the alembic animation into UE4
 

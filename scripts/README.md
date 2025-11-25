@@ -23,20 +23,32 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 Run the automated export script:
 
 ```bash
-./export_waves_display.sh [start_frame] [end_frame] [output_dir]
+./export_waves_display.sh [start_frame] [end_frame] [output_dir] [skip_existing]
 ```
+
+**Parameters**:
+- `start_frame`: Starting frame number (default: 752)
+- `end_frame`: Ending frame number (default: 868)
+- `output_dir`: Base output directory (default: `/hdd/gone_surfing_exports/medium_wave_left`)
+- `skip_existing`: `skip` to skip existing files (resume), `overwrite` to overwrite all (default: `skip`)
 
 **Examples**:
 
 ```bash
-# Use defaults (frames 752-868)
+# Use defaults (frames 752-868, skip existing files)
 ./export_waves_display.sh
 
-# Custom frame range
+# Custom frame range, skip existing files (resume interrupted export)
 ./export_waves_display.sh 752 868
 
-# Custom frame range and output directory
+# Custom frame range and output directory, skip existing
 ./export_waves_display.sh 752 868 /hdd/exports
+
+# Overwrite all files (re-export everything)
+./export_waves_display.sh 752 868 /hdd/exports overwrite
+
+# Resume from where export stopped (skip existing files)
+./export_waves_display.sh 752 868 /hdd/exports skip
 ```
 
 This script will:

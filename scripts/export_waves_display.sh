@@ -3,15 +3,18 @@
 # Export wave animation as chunked OBJ meshes at multiple quality levels
 # This script automates the export process described in the README for stop motion meshes
 #
-# Usage: ./export_waves_display.sh [start_frame] [end_frame] [output_dir]
-#   start_frame: Starting frame number (default: 752)
-#   end_frame:   Ending frame number (default: 868)
-#   output_dir:  Base output directory (default: /hdd/gone_surfing_exports/medium_wave_left)
+# Usage: ./export_waves_display.sh [start_frame] [end_frame] [output_dir] [skip_existing]
+#   start_frame:    Starting frame number (default: 752)
+#   end_frame:      Ending frame number (default: 868)
+#   output_dir:     Base output directory (default: /hdd/gone_surfing_exports/medium_wave_left)
+#   skip_existing:  'skip' to skip existing files, 'overwrite' to overwrite (default: skip)
 #
 # Examples:
-#   ./export_waves_display.sh                    # Use all defaults
-#   ./export_waves_display.sh 752 868           # Custom frame range
-#   ./export_waves_display.sh 752 868 /output   # Custom frame range and output
+#   ./export_waves_display.sh                              # Use all defaults, skip existing
+#   ./export_waves_display.sh 752 868                      # Custom frame range, skip existing
+#   ./export_waves_display.sh 752 868 /output              # Custom output, skip existing
+#   ./export_waves_display.sh 752 868 /output overwrite    # Overwrite all files
+#   ./export_waves_display.sh 752 868 /output skip         # Skip existing files (resume)
 
 set -e  # Exit on error
 
@@ -24,6 +27,7 @@ PYTHON_SCRIPT="$SCRIPT_DIR/export_waves_display.py"
 START_FRAME=${1:-752}
 END_FRAME=${2:-868}
 OUTPUT_BASE_DIR=${3:-/hdd/gone_surfing_exports/medium_wave_left}
+SKIP_EXISTING=${4:-skip}
 
 # Quality levels - decimate ratios from 0.1 down to 0.01 in steps of 0.01
 # FR-7 and FR-8: Multiple quality levels with decreasing ratios
@@ -37,6 +41,7 @@ echo "Start frame: $START_FRAME"
 echo "End frame: $END_FRAME"
 echo "Output base directory: $OUTPUT_BASE_DIR"
 echo "Quality levels (decimate ratios): $QUALITY_LEVELS"
+echo "Skip existing files: $SKIP_EXISTING"
 echo ""
 echo "Output directories will be created:"
 echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_1 (ratio: 0.1 - highest quality, largest files)"
@@ -79,7 +84,7 @@ echo "This may take a long time depending on the number of frames and quality le
 echo ""
 
 blender "$BLEND_FILE" --background --python "$PYTHON_SCRIPT" -- \
-    $START_FRAME $END_FRAME "$OUTPUT_BASE_DIR" "$QUALITY_LEVELS"
+    $START_FRAME $END_FRAME "$OUTPUT_BASE_DIR" "$QUALITY_LEVELS" "$SKIP_EXISTING"
 
 EXIT_CODE=$?
 

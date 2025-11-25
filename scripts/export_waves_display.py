@@ -14,14 +14,15 @@ argv = argv[argv.index("--") + 1:] if "--" in argv else []
 
 if len(argv) < 4:
     print("Error: Missing required arguments")
-    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv>")
-    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01")
+    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing]")
+    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip")
     sys.exit(1)
 
 start_frame = int(argv[0])
 end_frame = int(argv[1])
 output_base_dir = argv[2]
 quality_levels = [float(x) for x in argv[3].split(',')]
+skip_existing = argv[4] if len(argv) > 4 else 'skip'
 
 print(f"="*60)
 print(f"WAVE DISPLAY EXPORT")
@@ -30,6 +31,7 @@ print(f"Start frame: {start_frame}")
 print(f"End frame: {end_frame}")
 print(f"Output base directory: {output_base_dir}")
 print(f"Quality levels (decimate ratios): {quality_levels}")
+print(f"Skip existing files: {skip_existing}")
 print(f"="*60)
 
 # Configuration
@@ -123,8 +125,25 @@ def split_mesh_into_chunks(obj, chunks_x, chunks_y):
 
     return chunks
 
-def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds):
+def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True):
     """Export all chunks for a single frame at specified quality using fixed world coordinates"""
+    # Check if all chunks for this frame already exist
+    if skip_existing_files:
+        all_chunks_exist = True
+        for i in range(chunks_x):
+            for j in range(chunks_y):
+                chunk_filename = f"{i}_{j}_mesh_{frame}.obj"
+                chunk_filepath = os.path.join(output_dir, chunk_filename)
+                if not os.path.exists(chunk_filepath):
+                    all_chunks_exist = False
+                    break
+            if not all_chunks_exist:
+                break
+
+        if all_chunks_exist:
+            print(f"  Frame {frame}: All chunks already exist, skipping")
+            return
+
     # Set the current frame
     bpy.context.scene.frame_set(frame)
 
@@ -413,6 +432,9 @@ bpy.data.objects.remove(temp_obj)
 bpy.data.objects.remove(temp_final)
 bpy.data.meshes.remove(temp_mesh)
 
+# Convert skip_existing string to boolean
+skip_existing_files = (skip_existing.lower() == 'skip')
+
 # FR-6, FR-7, FR-8: Process each quality level
 for quality_idx, quality_ratio in enumerate(quality_levels):
     quality_name = f"ratio_{str(quality_ratio).replace('.', '_')}"
@@ -427,7 +449,7 @@ for quality_idx, quality_ratio in enumerate(quality_levels):
     # FR-6: Process each frame
     for frame in range(start_frame, end_frame + 1):
         print(f"\nFrame {frame}:")
-        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds)
+        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files)
 
         if frame % 10 == 0:
             print(f"  Progress: {frame - start_frame + 1}/{end_frame - start_frame + 1} frames")

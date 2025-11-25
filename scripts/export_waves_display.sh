@@ -25,9 +25,9 @@ START_FRAME=${1:-752}
 END_FRAME=${2:-868}
 OUTPUT_BASE_DIR=${3:-/hdd/gone_surfing_exports/medium_wave_left}
 
-# Quality levels - decimate ratios from 0.05 down to 0.01
+# Quality levels - decimate ratios from 0.1 down to 0.01 in steps of 0.01
 # FR-7 and FR-8: Multiple quality levels with decreasing ratios
-QUALITY_LEVELS="0.05,0.04,0.03,0.02,0.01"
+QUALITY_LEVELS="0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.01"
 
 echo "============================================================"
 echo "WAVE DISPLAY EXPORT - CHUNKED MESHES"
@@ -39,11 +39,16 @@ echo "Output base directory: $OUTPUT_BASE_DIR"
 echo "Quality levels (decimate ratios): $QUALITY_LEVELS"
 echo ""
 echo "Output directories will be created:"
-echo "  - ${OUTPUT_BASE_DIR}/chunks_epic_resolution (ratio: 0.05)"
-echo "  - ${OUTPUT_BASE_DIR}/chunks_higher_resolution (ratio: 0.04)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_1 (ratio: 0.1 - highest quality, largest files)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_09 (ratio: 0.09)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_08 (ratio: 0.08)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_07 (ratio: 0.07)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_06 (ratio: 0.06)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_05 (ratio: 0.05)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_04 (ratio: 0.04)"
 echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_03 (ratio: 0.03)"
 echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_02 (ratio: 0.02)"
-echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_01 (ratio: 0.01)"
+echo "  - ${OUTPUT_BASE_DIR}/chunks_ratio_0_01 (ratio: 0.01 - lowest quality, smallest files)"
 echo ""
 echo "This will create $(echo $QUALITY_LEVELS | tr ',' '\n' | wc -l) quality levels"
 echo "Each with $((END_FRAME - START_FRAME + 1)) frames"

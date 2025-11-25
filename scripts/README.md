@@ -42,16 +42,21 @@ Run the automated export script:
 This script will:
 1. Load the Blender file `breaking_waves_beach_break_2.blend` in background mode
 2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
-3. Apply decimate modifiers at multiple quality levels (ratios: 0.05, 0.04, 0.03, 0.02, 0.01)
-4. Split each frame into 24 chunks (3x8 grid along the longest axes)
+3. Apply decimate modifiers at multiple quality levels (ratios: 0.1 to 0.01 in steps of 0.01)
+4. Split each frame into 24 chunks (8x3 grid along the longest axes)
 5. Export each chunk as an OBJ file with naming: `{x}_{y}_mesh_{frame}.obj`
 
-**Output directories** (created automatically):
-- `chunks_epic_resolution` - Decimate ratio 0.05 (highest quality)
-- `chunks_higher_resolution` - Decimate ratio 0.04
-- `chunks_ratio_0_03` - Decimate ratio 0.03
-- `chunks_ratio_0_02` - Decimate ratio 0.02
-- `chunks_ratio_0_01` - Decimate ratio 0.01 (lowest quality, smallest file size)
+**Output directories** (created automatically, from highest to lowest quality):
+- `chunks_ratio_0_1` - Decimate ratio 0.1 (highest quality, 10% of polygons retained, largest file size)
+- `chunks_ratio_0_09` - Decimate ratio 0.09 (9% of polygons retained)
+- `chunks_ratio_0_08` - Decimate ratio 0.08 (8% of polygons retained)
+- `chunks_ratio_0_07` - Decimate ratio 0.07 (7% of polygons retained)
+- `chunks_ratio_0_06` - Decimate ratio 0.06 (6% of polygons retained)
+- `chunks_ratio_0_05` - Decimate ratio 0.05 (5% of polygons retained)
+- `chunks_ratio_0_04` - Decimate ratio 0.04 (4% of polygons retained)
+- `chunks_ratio_0_03` - Decimate ratio 0.03 (3% of polygons retained)
+- `chunks_ratio_0_02` - Decimate ratio 0.02 (2% of polygons retained)
+- `chunks_ratio_0_01` - Decimate ratio 0.01 (lowest quality, 1% of polygons retained, smallest file size)
 
 **Import to Unreal Engine**:
 1. Choose a quality level directory based on your performance needs

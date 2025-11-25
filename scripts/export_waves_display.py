@@ -416,18 +416,7 @@ bpy.data.meshes.remove(temp_mesh)
 # FR-6, FR-7, FR-8: Process each quality level
 for quality_idx, quality_ratio in enumerate(quality_levels):
     quality_name = f"ratio_{str(quality_ratio).replace('.', '_')}"
-
-    if quality_idx == 0:
-        # First quality level uses specific folder names
-        if quality_ratio == 0.05:
-            quality_folder = "chunks_epic_resolution"
-        elif quality_ratio == 0.04:
-            quality_folder = "chunks_higher_resolution"
-        else:
-            quality_folder = f"chunks_{quality_name}"
-    else:
-        quality_folder = f"chunks_{quality_name}"
-
+    quality_folder = f"chunks_{quality_name}"
     output_dir = os.path.join(output_base_dir, quality_folder)
 
     print(f"\n{'-'*60}")

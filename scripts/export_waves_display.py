@@ -6,6 +6,7 @@ import bpy
 import os
 import sys
 import bmesh
+import time
 from mathutils import Vector
 
 # Get command-line arguments passed after --
@@ -435,6 +436,12 @@ bpy.data.meshes.remove(temp_mesh)
 # Convert skip_existing string to boolean
 skip_existing_files = (skip_existing.lower() == 'skip')
 
+# Initialize timing variables
+total_frames_to_export = (end_frame - start_frame + 1) * len(quality_levels)
+current_frame_index = 0
+frame_times = []
+overall_start_time = time.time()
+
 # FR-6, FR-7, FR-8: Process each quality level
 for quality_idx, quality_ratio in enumerate(quality_levels):
     quality_name = f"ratio_{str(quality_ratio).replace('.', '_')}"
@@ -448,16 +455,49 @@ for quality_idx, quality_ratio in enumerate(quality_levels):
 
     # FR-6: Process each frame
     for frame in range(start_frame, end_frame + 1):
+        frame_start_time = time.time()
+
         print(f"\nFrame {frame}:")
         export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files)
 
-        if frame % 10 == 0:
-            print(f"  Progress: {frame - start_frame + 1}/{end_frame - start_frame + 1} frames")
+        # Calculate time for this frame
+        frame_duration = time.time() - frame_start_time
+        frame_times.append(frame_duration)
+        current_frame_index += 1
+
+        # Calculate and display time estimate
+        if len(frame_times) > 0:
+            avg_time_per_frame = sum(frame_times) / len(frame_times)
+            frames_remaining = total_frames_to_export - current_frame_index
+            estimated_seconds_remaining = avg_time_per_frame * frames_remaining
+
+            # Format time estimate
+            hours = int(estimated_seconds_remaining // 3600)
+            minutes = int((estimated_seconds_remaining % 3600) // 60)
+            seconds = int(estimated_seconds_remaining % 60)
+
+            elapsed_seconds = time.time() - overall_start_time
+            elapsed_hours = int(elapsed_seconds // 3600)
+            elapsed_minutes = int((elapsed_seconds % 3600) // 60)
+            elapsed_secs = int(elapsed_seconds % 60)
+
+            print(f"  Frame completed in {frame_duration:.1f}s")
+            print(f"  Progress: {current_frame_index}/{total_frames_to_export} frames ({100*current_frame_index/total_frames_to_export:.1f}%)")
+            print(f"  Elapsed: {elapsed_hours}h {elapsed_minutes}m {elapsed_secs}s")
+            print(f"  Estimated time remaining: {hours}h {minutes}m {seconds}s")
 
 print(f"\n{'='*60}")
 print(f"EXPORT COMPLETE!")
 print(f"{'='*60}")
 print(f"Processed {len(quality_levels)} quality levels")
-print(f"Processed {end_frame - start_frame + 1} frames")
+print(f"Processed {end_frame - start_frame + 1} frames per quality level")
 print(f"Total chunks per frame: {CHUNKS_X * CHUNKS_Y}")
+print(f"Total frames exported: {current_frame_index}")
+
+# Calculate and display total time
+total_elapsed = time.time() - overall_start_time
+total_hours = int(total_elapsed // 3600)
+total_minutes = int((total_elapsed % 3600) // 60)
+total_seconds = int(total_elapsed % 60)
+print(f"Total time: {total_hours}h {total_minutes}m {total_seconds}s")
 print(f"{'='*60}")

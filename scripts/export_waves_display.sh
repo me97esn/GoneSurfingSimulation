@@ -29,9 +29,9 @@ END_FRAME=${2:-868}
 OUTPUT_BASE_DIR=${3:-/hdd/gone_surfing_exports/medium_wave_left}
 SKIP_EXISTING=${4:-skip}
 
-# Quality levels - decimate ratios from 0.1 down to 0.01 in steps of 0.01
+# Quality levels - decimate ratios
 # FR-7 and FR-8: Multiple quality levels with decreasing ratios
-QUALITY_LEVELS="0.1,0.09,0.08,0.07,0.06,0.05,0.04,0.03,0.02,0.01"
+QUALITY_LEVELS="0.05,0.03"
 
 echo "============================================================"
 echo "WAVE DISPLAY EXPORT - CHUNKED MESHES"

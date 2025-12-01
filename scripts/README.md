@@ -20,10 +20,12 @@ Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Isla
 
 ## Export the wave animation (Alternative stop motion meshes for use in mobile games)
 
-Run the automated export script:
+### Parallel Export (Recommended - Much Faster!)
+
+For large frame ranges, use the parallel version which splits work across multiple CPU cores:
 
 ```bash
-./export_waves_display.sh [start_frame] [end_frame] [output_dir] [skip_existing]
+./export_waves_display_parallel.sh [start_frame] [end_frame] [output_dir] [skip_existing] [num_jobs]
 ```
 
 **Parameters**:
@@ -31,6 +33,35 @@ Run the automated export script:
 - `end_frame`: Ending frame number (default: 868)
 - `output_dir`: Base output directory (default: `/hdd/gone_surfing_exports/medium_wave_left`)
 - `skip_existing`: `skip` to skip existing files (resume), `overwrite` to overwrite all (default: `skip`)
+- `num_jobs`: Number of parallel jobs (default: 8)
+
+**Examples**:
+
+```bash
+# Use defaults (8 parallel jobs, frames 752-868)
+./export_waves_display_parallel.sh
+
+# Custom frame range with 8 parallel jobs
+./export_waves_display_parallel.sh 752 868
+
+# Use 4 parallel jobs (if you have fewer cores)
+./export_waves_display_parallel.sh 752 868 /hdd/exports skip 4
+
+# Maximum speed with 8 cores
+./export_waves_display_parallel.sh 752 868 /hdd/exports skip 8
+```
+
+**Performance**: With 8 cores, this can be up to ~8x faster than the sequential version (e.g., 200 hours → ~25 hours).
+
+**Monitoring**: Progress logs are saved to `{output_dir}/parallel_logs/` for each job. You can tail these files to monitor progress.
+
+### Sequential Export (Single-threaded)
+
+For smaller jobs or debugging, use the sequential version:
+
+```bash
+./export_waves_display.sh [start_frame] [end_frame] [output_dir] [skip_existing]
+```
 
 **Examples**:
 

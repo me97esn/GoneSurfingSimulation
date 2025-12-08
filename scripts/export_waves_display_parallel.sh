@@ -30,7 +30,7 @@ SKIP_EXISTING=${4:-skip}
 NUM_JOBS=${5:-8}
 
 # Quality levels - decimate ratios
-QUALITY_LEVELS="0.02,0.01"
+QUALITY_LEVELS="0.02,0.01, 0.007, 0.005, 0.003, 0.002, 0.001"
 
 echo "============================================================"
 echo "WAVE DISPLAY EXPORT - PARALLEL (${NUM_JOBS} jobs)"

@@ -22,7 +22,7 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 9. **FR-9**: It should update the readme, the part about "Export the wave animation (Alternative stop motion meshes for use in mobile games)", with info about how to run the script.
 10. **FR-10**: The mesh chunks shall use fixed world coordinates across all frames. The chunk boundaries must be calculated once from the start_frame's bounding box and then reused for all subsequent frames, ensuring that each chunk (e.g., 0_0, 0_1, etc.) represents the same spatial region in every frame.
 11. **FR-11**: The chunks shall have straight edges created by using plane bisection operations, ensuring clean rectangular boundaries instead of jagged edges following vertex positions.
-12. **FR-12**: The script shall remove downward-facing faces from the full mesh before chunking. This is done by recalculating normals on the complete mesh (before splitting into chunks) and removing all faces with negative Z-component normals (faces pointing downward). This ensures consistent normals across all chunks and prevents some chunks from being inverted.
+12. **FR-12**: The script shall remove the flat bottom plane created by the boolean modifier while preserving the underside of breaking waves. This is done by removing only nearly-horizontal downward-facing faces (Z-normal < -0.95) after the boolean operation. This threshold preserves curved/angled surfaces like wave undersides while removing the flat bottom.
 
 ### Non-Functional Requirements
 
@@ -60,11 +60,12 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 - Python script adds Boolean modifier to `fluid_surface` mesh
 - Uses 'DIFFERENCE' operation with `BoolBoundary` object
 - Automatically detects if BoolBoundary exists, warns if not found
+- Creates a flat bottom surface at the cut plane (removed by FR-12)
 
 ### FR-3 Implementation (Decimate modifier):
 - Adds Decimate modifier with 'COLLAPSE' type
-- Ratio is configurable per quality level (0.05, 0.04, 0.03, 0.02, 0.01)
-- Applied after boolean modifier
+- Ratio is configurable per quality level
+- Applied after boolean modifier, before FR-12 face removal
 
 ### FR-4 Implementation (Split into chunks):
 - Automatically determines longest and second-longest axes
@@ -108,12 +109,13 @@ Create a script that exports the fluid surface from blender to obj files. Split 
 - `clear_outer=True` removes geometry outside the boundary
 - Results in perfectly rectangular chunks with straight edges
 
-### FR-12 Implementation (Remove downward-facing faces):
+### FR-12 Implementation (Remove flat bottom faces):
 - Applied to the full mesh BEFORE chunking (critical for consistent results)
 - Uses `bmesh.ops.recalc_face_normals()` to ensure normals are correctly oriented
-- Iterates through all faces and identifies those with `face.normal.z < 0`
-- Removes downward-facing faces using `bmesh.ops.delete()`
-- Prevents chunks from being inverted (showing bottom instead of top of water)
+- Iterates through all faces and identifies those with Z-normal < -0.95
+- Removes only nearly-horizontal downward-facing faces using `bmesh.ops.delete()`
+- Threshold of -0.95 preserves curved/angled surfaces like wave undersides
+- Only removes the flat bottom plane created by the boolean modifier
 - Must be done before chunking because recalculating normals on individual chunks can cause unpredictable flipping
 
 ### Script Features:

@@ -205,9 +205,10 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     print(f"  Current mesh bounds: min={bounds['min']}, max={bounds['max']}")
     print(f"  Mesh world matrix: {final_obj.matrix_world}")
 
-    # FR-12: Remove downward-facing faces from the FULL mesh before chunking
-    # This ensures consistent normals across all chunks
-    print(f"  FR-12: Recalculating normals and removing downward-facing faces on full mesh")
+    # FR-12: Remove the flat bottom created by the boolean modifier
+    # This removes only nearly-horizontal downward-facing faces (the cut plane bottom)
+    # while preserving the underside of breaking waves (which have varied normals)
+    print(f"  FR-12: Removing flat bottom plane created by boolean modifier")
     bm_full = bmesh.new()
     bm_full.from_mesh(final_obj.data)
 
@@ -218,20 +219,25 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     # Count faces before removal
     total_faces_before = len(bm_full.faces)
 
-    # Find faces with downward-pointing normals
+    # Find faces that are nearly horizontal and pointing downward
+    # These are the flat bottom faces created by the boolean modifier
+    # Breaking wave undersides will have varied normals (not purely vertical)
     faces_to_remove = []
+    HORIZONTAL_THRESHOLD = -0.95  # Normal Z must be less than -0.95 (nearly straight down)
+
     for face in bm_full.faces:
-        # Check if face normal points downward (negative Z component)
-        if face.normal.z < 0:
+        # Only remove faces that are nearly perfectly horizontal and pointing down
+        # This preserves curved/angled surfaces like wave undersides
+        if face.normal.z < HORIZONTAL_THRESHOLD:
             faces_to_remove.append(face)
 
-    # Remove downward-facing faces
+    # Remove the flat bottom faces
     bmesh.ops.delete(bm_full, geom=faces_to_remove, context='FACES')
 
     # Count faces after removal
     total_faces_after = len(bm_full.faces)
 
-    print(f"  Removed {len(faces_to_remove)} downward-facing faces from full mesh (before: {total_faces_before}, after: {total_faces_after})")
+    print(f"  Removed {len(faces_to_remove)} nearly-horizontal bottom faces (before: {total_faces_before}, after: {total_faces_after})")
 
     # Update the mesh with cleaned geometry
     bm_full.to_mesh(final_obj.data)

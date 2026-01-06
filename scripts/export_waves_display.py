@@ -36,8 +36,8 @@ print(f"Skip existing files: {skip_existing}")
 print(f"="*60)
 
 # Configuration
-CHUNKS_X = 1  # Split 1 time along longest axis (single chunk)
-CHUNKS_Y = 1  # Split 1 time along second longest axis (single chunk)
+CHUNKS_X = 3  # Split 3 times along longest axis
+CHUNKS_Y = 1  # Split 1 time along second longest axis
 FLUID_SURFACE_NAME = 'fluid_surface'
 BOOL_BOUNDARY_NAME = 'BoolBoundary'
 

@@ -129,16 +129,17 @@ def split_mesh_into_chunks(obj, chunks_x, chunks_y):
 def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True):
     """Export all chunks for a single frame at specified quality using fixed world coordinates"""
     # Check if all chunks for this frame already exist
+    # For 3x1 configuration: we export 2 files (0_0 contains chunks 0&2, 1_0 is middle chunk)
     if skip_existing_files:
         all_chunks_exist = True
-        for i in range(chunks_x):
-            for j in range(chunks_y):
-                chunk_filename = f"{i}_{j}_mesh_{frame}.obj"
-                chunk_filepath = os.path.join(output_dir, chunk_filename)
-                if not os.path.exists(chunk_filepath):
-                    all_chunks_exist = False
-                    break
-            if not all_chunks_exist:
+        # Check for combined chunk file (0_0) and middle chunk file (1_0)
+        for j in range(chunks_y):
+            chunk_0_filename = f"0_{j}_mesh_{frame}.obj"
+            chunk_1_filename = f"1_{j}_mesh_{frame}.obj"
+            chunk_0_filepath = os.path.join(output_dir, chunk_0_filename)
+            chunk_1_filepath = os.path.join(output_dir, chunk_1_filename)
+            if not os.path.exists(chunk_0_filepath) or not os.path.exists(chunk_1_filepath):
+                all_chunks_exist = False
                 break
 
         if all_chunks_exist:
@@ -247,11 +248,38 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     # Export each chunk
     os.makedirs(output_dir, exist_ok=True)
 
+    # Calculate adjusted chunk boundaries for 3x1 configuration:
+    # - Middle chunk (i=1): 20% bigger
+    # - Side chunks (i=0, i=2): 10% smaller each
+    # Total size remains the same: -0.1 + 1.2 + (-0.1) = 1.0
+    total_primary_size = primary_max - primary_min
+    original_chunk_size = total_primary_size / chunks_x  # Each chunk was 1/3
+
+    # New sizes (as fractions of total):
+    # Chunk 0: 1/3 - 10% = 1/3 * 0.9 = 0.3
+    # Chunk 1: 1/3 + 20% = 1/3 * 1.2 = 0.4
+    # Chunk 2: 1/3 - 10% = 1/3 * 0.9 = 0.3
+    chunk_sizes = [
+        original_chunk_size * 0.9,  # Chunk 0: 10% smaller
+        original_chunk_size * 1.2,  # Chunk 1: 20% bigger
+        original_chunk_size * 0.9   # Chunk 2: 10% smaller
+    ]
+
+    # Calculate cumulative boundaries
+    chunk_boundaries = [primary_min]
+    for size in chunk_sizes:
+        chunk_boundaries.append(chunk_boundaries[-1] + size)
+
+    print(f"  Adjusted chunk boundaries: {chunk_boundaries}")
+    print(f"  Chunk 0 size: {chunk_sizes[0]:.2f} (90% of original)")
+    print(f"  Chunk 1 size: {chunk_sizes[1]:.2f} (120% of original)")
+    print(f"  Chunk 2 size: {chunk_sizes[2]:.2f} (90% of original)")
+
     for i in range(chunks_x):
         for j in range(chunks_y):
-            # Calculate bounds for this chunk
-            p_start = primary_min + i * chunk_primary
-            p_end = primary_min + (i + 1) * chunk_primary
+            # Use adjusted boundaries for primary axis
+            p_start = chunk_boundaries[i]
+            p_end = chunk_boundaries[i + 1]
             s_start = secondary_min + j * chunk_secondary
             s_end = secondary_min + (j + 1) * chunk_secondary
 
@@ -320,28 +348,59 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             chunk_obj = bpy.data.objects.new(f"chunk_{i}_{j}_{frame}", chunk_mesh)
             bpy.context.collection.objects.link(chunk_obj)
 
-            # Export chunk as OBJ
-            chunk_filename = f"{i}_{j}_mesh_{frame}.obj"
-            chunk_filepath = os.path.join(output_dir, chunk_filename)
+            # Store chunk objects for later export
+            if i == 0:
+                chunk_0_obj = chunk_obj
+                chunk_0_mesh = chunk_mesh
+            elif i == 1:
+                # Export middle chunk (i=1) immediately as separate file
+                chunk_filename = f"{i}_{j}_mesh_{frame}.obj"
+                chunk_filepath = os.path.join(output_dir, chunk_filename)
 
-            # Select only this chunk
-            bpy.ops.object.select_all(action='DESELECT')
-            chunk_obj.select_set(True)
-            bpy.context.view_layer.objects.active = chunk_obj
+                # Select only this chunk
+                bpy.ops.object.select_all(action='DESELECT')
+                chunk_obj.select_set(True)
+                bpy.context.view_layer.objects.active = chunk_obj
 
-            # Export OBJ
-            bpy.ops.wm.obj_export(
-                filepath=chunk_filepath,
-                export_selected_objects=True,
-                export_animation=False,
-                forward_axis='X',
-                up_axis='Z',
-                apply_modifiers=True
-            )
+                # Export OBJ
+                bpy.ops.wm.obj_export(
+                    filepath=chunk_filepath,
+                    export_selected_objects=True,
+                    export_animation=False,
+                    forward_axis='X',
+                    up_axis='Z',
+                    apply_modifiers=True
+                )
 
-            # Cleanup chunk object
-            bpy.data.objects.remove(chunk_obj)
-            bpy.data.meshes.remove(chunk_mesh)
+                # Cleanup chunk object
+                bpy.data.objects.remove(chunk_obj)
+                bpy.data.meshes.remove(chunk_mesh)
+            elif i == 2:
+                # Combine chunk 0 and chunk 2 into a single file
+                chunk_filename = f"0_{j}_mesh_{frame}.obj"
+                chunk_filepath = os.path.join(output_dir, chunk_filename)
+
+                # Select both chunk 0 and chunk 2
+                bpy.ops.object.select_all(action='DESELECT')
+                chunk_0_obj.select_set(True)
+                chunk_obj.select_set(True)
+                bpy.context.view_layer.objects.active = chunk_0_obj
+
+                # Export both chunks together
+                bpy.ops.wm.obj_export(
+                    filepath=chunk_filepath,
+                    export_selected_objects=True,
+                    export_animation=False,
+                    forward_axis='X',
+                    up_axis='Z',
+                    apply_modifiers=True
+                )
+
+                # Cleanup both chunk objects
+                bpy.data.objects.remove(chunk_0_obj)
+                bpy.data.meshes.remove(chunk_0_mesh)
+                bpy.data.objects.remove(chunk_obj)
+                bpy.data.meshes.remove(chunk_mesh)
 
     # Cleanup
     bpy.data.objects.remove(work_obj)

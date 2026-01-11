@@ -119,41 +119,61 @@ The script runs fully automated in Blender's background mode, so no manual inter
 
 ### Export white water particles and convert to Niagara Datatable format
 
-Run the complete export script:
+White water particles must be exported manually from Blender's GUI (background mode doesn't load the FLIP Fluids whitewater mesh cache).
+
+#### Step 1: Export OBJ files from Blender
+
+1. Open Blender with the simulation file:
+   ```bash
+   blender ../3dmodels/breaking_waves_beach_break_2.blend
+   ```
+
+2. Switch to the **Scripting** workspace (tab at the top of Blender)
+
+3. Open the export script:
+   - Click **Open** button in the scripting panel
+   - Navigate to and select `scripts/export_white_water_manual.py`
+
+4. **Configure the export** (edit the script if needed):
+   - `START_FRAME` - Starting frame number (default: 752)
+   - `END_FRAME` - Ending frame number (default: 1325)
+   - `OUTPUT_DIR` - Output directory (default: `/hdd/gone_surfing_exports/medium_wave_left/white_water`)
+   - `EXPORT_FOAM` - Export foam particles (default: True)
+   - Set `EXPORT_BUBBLE`, `EXPORT_SPRAY`, `EXPORT_DUST` to True if needed
+
+5. Run the script:
+   - Press **Alt+P** or click the ▶️ **Run Script** button
+   - The script will print progress every 50 frames
+   - Wait for completion (this may take a while for large frame ranges)
+
+#### Step 2: Convert OBJ files to Unreal Niagara format
+
+After the OBJ export completes, run the conversion script:
 
 ```bash
-./export_white_water_complete.sh [start_frame] [end_frame]
+cd scripts
+node export_white_water_points.js [start_frame] [end_frame]
 ```
 
 **Examples**:
 
 ```bash
 # Use defaults (frames 752-1325)
-./export_white_water_complete.sh
+node export_white_water_points.js 752 1325
 
-./export_white_water_complete.sh 886 1078
+# Custom frame range
+node export_white_water_points.js 886 1078
 ```
 
-This script will:
-
-1. Export white water particles from Blender as OBJ files
-2. Convert the OBJ files to Niagara Datatable format (creates 3 JSON files with different rotations)
-3. Output files to `/hdd/gone_surfing_exports/medium_wave_left/white_water/`
-
-The script runs Blender in background mode and automatically finds the white water foam object, so no manual interaction is required.
-
-**Advanced Configuration**: Edit `export_white_water_complete.sh` to change:
-
-- `OUTPUT_DIR` - Where to save the files (default: `/hdd/gone_surfing_exports/medium_wave_left/white_water`)
-- `BLEND_FILE` - Path to the .blend file (default: `../3dmodels/breaking_waves_beach_break_2.blend`)
-
-**Output files**:
+This will create 3 JSON files in the output directory:
 
 - `white-water-points-data-rotX.json` - Rotated 90° around X-axis
 - `white-water-points-data-rotY.json` - Rotated 90° around Y-axis
 - `white-water-points-data-rotZ.json` - Rotated 90° around Z-axis
 
-**Import to Unreal**: Import one of the JSON files as a datatable and configure your Niagara particle system to use it. The files are in WavePointsData format, compatible with Niagara systems.
+**Why manual export?** Blender's background mode doesn't properly load the FLIP Fluids whitewater mesh cache, resulting in empty exports. Running the export script from within Blender's GUI ensures the cache is properly loaded.
+
+**Import to Unreal**: Import one of the JSON files as a datatable and configure your Niagara particle system to use it. The files are in WavePointsData format, compatible with Niagara systems. Compare the three rotation variants in Unreal to determine which axis produces the correct orientation.
 
 ## Water height
 

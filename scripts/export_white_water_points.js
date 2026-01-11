@@ -6,15 +6,17 @@ const path = require("path");
 const dir = "/hdd/gone_surfing_exports/medium_wave_left/white_water";
 
 // Parse command-line arguments for start and end frame
-// Usage: node export_white_water_points.js [start_frame] [end_frame]
+// Usage: node export_white_water_points.js [start_frame] [end_frame] [frame_step]
 const args = process.argv.slice(2);
 const startFrame = args[0] ? parseInt(args[0]) : 752;
 const endFrame = args[1] ? parseInt(args[1]) : null; // null means process all files
+const frameStep = args[2] ? parseInt(args[2]) : 5; // Export every Nth frame (default: 5)
 
 console.log(`Start frame: ${startFrame}`);
 if (endFrame) {
   console.log(`End frame: ${endFrame}`);
 }
+console.log(`Frame step: ${frameStep} (exporting every ${frameStep}${frameStep === 1 ? 'st' : frameStep === 2 ? 'nd' : frameStep === 3 ? 'rd' : 'th'} frame)`);
 
 const rotationDegrees = 90; // 90 degrees rotation for each axis
 const rotationRadians = (rotationDegrees * Math.PI) / 180;
@@ -63,7 +65,7 @@ const allFiles = fs
   .readdirSync(dir)
   .filter(f => f.match(/.*\.obj$/));
 
-// Filter files by frame range and sort by frame number
+// Filter files by frame range, frame step, and sort by frame number
 const files = allFiles
   .map(fileName => {
     const match = fileName.match(/(\d+)\./);
@@ -73,6 +75,8 @@ const files = allFiles
     if (!item) return false;
     if (item.frameNumber < startFrame) return false;
     if (endFrame && item.frameNumber > endFrame) return false;
+    // Only include frames that match the step pattern (e.g., every 5th frame)
+    if ((item.frameNumber - startFrame) % frameStep !== 0) return false;
     return true;
   })
   .sort((a, b) => a.frameNumber - b.frameNumber)
@@ -160,23 +164,17 @@ for (const fileName of files) {
   // Create frame data in WavePointsData format for each rotation
   framesX.push({
     Name: `Frame_${frameNumber}`,
-    Positions: positionsX,
-    Normals: [],
-    Scales: []
+    Positions: positionsX
   });
 
   framesY.push({
     Name: `Frame_${frameNumber}`,
-    Positions: positionsY,
-    Normals: [],
-    Scales: []
+    Positions: positionsY
   });
 
   framesZ.push({
     Name: `Frame_${frameNumber}`,
-    Positions: positionsZ,
-    Normals: [],
-    Scales: []
+    Positions: positionsZ
   });
 
   console.log(`  Particles in frame: ${positionsX.length}`);

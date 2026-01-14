@@ -120,6 +120,7 @@ The script runs fully automated in Blender's background mode, so no manual inter
 ### Export white water particles and convert to Niagara Datatable format
 
 White water particles must be exported manually from Blender's GUI (background mode doesn't load the FLIP Fluids whitewater mesh cache).
+#### Step 0: Remove the old obj files from the target folder (currently /hdd/gone_surfing_exports/medium_wave_left/white_water)
 
 #### Step 1: Export OBJ files from Blender
 

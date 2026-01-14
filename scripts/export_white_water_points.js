@@ -10,7 +10,7 @@ const dir = "/hdd/gone_surfing_exports/medium_wave_left/white_water";
 const args = process.argv.slice(2);
 const startFrame = args[0] ? parseInt(args[0]) : 752;
 const endFrame = args[1] ? parseInt(args[1]) : null; // null means process all files
-const frameStep = args[2] ? parseInt(args[2]) : 5; // Export every Nth frame (default: 5)
+const frameStep = args[2] ? parseInt(args[2]) : 1; // Export every Nth frame (default: 1, i.e. every frame)
 
 console.log(`Start frame: ${startFrame}`);
 if (endFrame) {

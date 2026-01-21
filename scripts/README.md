@@ -86,7 +86,7 @@ This script will:
 1. Load the Blender file `breaking_waves_beach_break_2.blend` in background mode
 2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
 3. Apply decimate modifiers at multiple quality levels (ratios: 0.1 to 0.01 in steps of 0.01)
-4. Split each frame into 24 chunks (8x3 grid along the longest axes)
+4. Split each frame into 3 chunks (3x1 grid along the longest axis)
 5. Export each chunk as an OBJ file with naming: `{x}_{y}_mesh_{frame}.obj`
 
 **Output directories** (created automatically, from highest to lowest quality):
@@ -107,6 +107,42 @@ This script will:
 3. Use the MeshArrayActor button to load the meshes into the Niagara system
 
 The script runs fully automated in Blender's background mode, so no manual interaction is required.
+
+### Apply Seamless Blending (Optional)
+
+If you're placing meshes side by side to create an infinite scrollable wave, you can apply seamless blending to eliminate visible seams between adjacent meshes.
+
+#### Step 1: One-time setup in Blender
+
+1. Open the simulation Blender file
+2. Import a reference mesh (e.g., an OBJ from frame 85)
+3. Position it exactly where it would be placed adjacent to frame 0 in Unreal
+4. Name the imported mesh (e.g., "frame_85_reference")
+5. Save the Blender file
+
+#### Step 2: Run the blending script
+
+```bash
+python apply_seamless_blending.py \
+    --blend-file ../3dmodels/breaking_waves_beach_break_2.blend \
+    --reference-mesh "frame_85_reference" \
+    --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05 \
+    --output /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05_seamless \
+    --frame-offset 85
+```
+
+**Parameters**:
+- `--blend-file`: Path to the Blender file with the positioned reference mesh
+- `--reference-mesh`: Name of the reference mesh in Blender (used to get position offset)
+- `--input`: Folder containing exported OBJ files
+- `--output`: Output folder for blended meshes (default: `/tmp/seamless_blended_meshes`)
+- `--frame-offset`: Frame difference between adjacent meshes (default: 85)
+- `--blend-width`: Blend zone width as percentage of mesh width (default: 5.0)
+- `--blend-axis`: Axis along which meshes are placed: x, y, or z (default: x)
+- `--blend-direction`: Which edge to blend: positive or negative (default: positive)
+- `--edge-chunk`: X index of edge chunks to blend (default: 2 for 3x1 grid)
+
+The script reads the reference mesh position from Blender, then modifies only the edge chunk vertices in the blend zone, smoothly interpolating them toward the corresponding vertices in frame N+offset.
 
 ## Import the alembic animation into UE4
 

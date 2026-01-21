@@ -88,7 +88,7 @@ This creates seamless transitions for infinite side-by-side placement.
 - The blend needs to work for all frames in the animation
 - Each frame N should blend seamlessly with frame N+offset
 - For frames near the end of the animation where N+offset exceeds total frames, wrap around (modulo)
-- The chunk splitting (8x3 grid) needs consideration - only edge chunks along the blend axis need blending
+- The chunk splitting (3x1 grid) needs consideration - only edge chunks along the blend axis need blending
 - Vertex interpolation should use smooth falloff (e.g., ease-in-out) to avoid harsh transitions
 - Script must parse OBJ files, modify vertex positions, and write back valid OBJ files
 - Should process all quality level folders if specified, or a single folder
@@ -105,9 +105,9 @@ For vertices in the transition zone:
 
 ### Chunk Handling
 
-Since meshes are split into 8x3 chunks:
+Since meshes are split into 3x1 chunks:
 - Only chunks on the blend edge need modification
-- For X-axis blending with positive direction: chunks at x=7 (rightmost column)
+- For X-axis blending with positive direction: chunks at x=2 (rightmost column)
 - Other chunks export unchanged
 
 ## Success Criteria

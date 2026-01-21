@@ -18,14 +18,26 @@ Add a **transition/blend zone** (approximately 5% of mesh width) on one edge of 
 
 ### Approach
 
-1. **One-time setup in Blender**: User imports one of the exported OBJ files (e.g., frame 85) into the original Blender file and positions it exactly where it would be placed in the game relative to frame 0. This establishes the spatial relationship between adjacent meshes.
+**Separate post-processing step** (not integrated into export pipeline):
 
-2. **Integrated into export pipeline**: Modify the existing export scripts to:
-   - Take the frame offset as a configurable parameter (default: 85)
-   - For each frame N being exported, also load the geometry from frame N+offset
-   - Create a transition zone on one edge (~5% of mesh width)
-   - Interpolate vertex positions in the transition zone to match frame N+offset's corresponding edge
-   - Export the blended mesh
+The seamless blending is implemented as a separate script that runs on already-exported OBJ files. This is preferable to integrating into the export pipeline because:
+- The export takes many hours to complete
+- Iteration on the seamless algorithm can be done quickly without re-exporting
+- Easier to debug and tune blending parameters
+- Can re-run blending with different settings without touching the original exports
+
+**Workflow:**
+
+1. **First**: Export all meshes using the existing `export_waves_display.sh` script (unchanged)
+2. **Second**: Run the seamless blending script on the exported OBJ files
+
+**Seamless blending script** (`apply_seamless_blending.py` or similar):
+   - Takes the exported OBJ folder as input
+   - Takes the frame offset as a configurable parameter (default: 85)
+   - For each frame N, loads both frame N and frame N+offset OBJ files
+   - Creates a transition zone on one edge (~5% of mesh width)
+   - Interpolates vertex positions in the transition zone to match frame N+offset's corresponding edge
+   - Overwrites the original OBJ file (or writes to a new folder)
 
 ### Why One Edge is Sufficient
 
@@ -40,24 +52,36 @@ This creates seamless transitions for infinite side-by-side placement.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `input_folder` | (required) | Path to folder containing exported OBJ files |
+| `output_folder` | (same as input) | Path to output folder (if not specified, overwrites input files) |
 | `frame_offset` | 85 | Number of frames between adjacent meshes |
+| `reference_mesh_name` | (required) | Name of the imported reference mesh in the Blender file (used to read position offset) |
 | `blend_width_percent` | 5.0 | Width of the transition zone as percentage of mesh width |
 | `blend_axis` | "x" | Axis along which meshes are placed side by side ("x", "y", or "z") |
 | `blend_direction` | "positive" | Which edge to blend ("positive" or "negative" end of the axis) |
-| `reference_mesh_name` | (user specified) | Name of the imported reference mesh used to establish positioning |
 
 ## Workflow
 
-1. **One-time setup**:
-   - Open the original Blender file
+1. **One-time setup** (in Blender):
+   - Open Blender with the original simulation file
    - Import a reference mesh (e.g., frame 85 OBJ)
    - Position it exactly where it would be placed in the game relative to frame 0
-   - Note the position offset for the export script
+   - Save the Blender file (the reference mesh position is now stored)
 
-2. **Export with blending**:
-   - Run the modified export script with frame offset parameter
-   - Script automatically blends each frame's edge with frame+offset
-   - Meshes are exported ready for seamless placement
+2. **Export meshes** (no changes to existing workflow):
+   - Run `./export_waves_display.sh` as usual
+   - This exports all frames and quality levels to OBJ files
+   - Takes many hours but only needs to be done once
+
+3. **Apply seamless blending** (new post-processing step):
+   - Run the seamless blending script
+   - The script reads the Blender file to get the reference mesh position automatically
+   - Example: `python apply_seamless_blending.py --blend-file ../3dmodels/breaking_waves_beach_break_2.blend --reference-mesh "frame_85_reference" --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05 --frame-offset 85`
+   - This modifies the OBJ files in place (or outputs to a separate folder)
+   - Fast to run, can iterate multiple times with different parameters
+
+4. **Import to Unreal** (unchanged):
+   - Import the blended OBJ files as before
 
 ## Technical Considerations
 
@@ -66,7 +90,8 @@ This creates seamless transitions for infinite side-by-side placement.
 - For frames near the end of the animation where N+offset exceeds total frames, wrap around (modulo)
 - The chunk splitting (8x3 grid) needs consideration - only edge chunks along the blend axis need blending
 - Vertex interpolation should use smooth falloff (e.g., ease-in-out) to avoid harsh transitions
-- The reference mesh positioning determines the spatial offset between adjacent meshes
+- Script must parse OBJ files, modify vertex positions, and write back valid OBJ files
+- Should process all quality level folders if specified, or a single folder
 
 ## Implementation Notes
 

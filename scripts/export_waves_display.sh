@@ -31,7 +31,8 @@ SKIP_EXISTING=${4:-skip}
 
 # Quality levels - decimate ratios
 # FR-7 and FR-8: Multiple quality levels with decreasing ratios
-QUALITY_LEVELS="0.02,0.01"
+QUALITY_LEVELS="0.03,0.005"
+# QUALITY_LEVELS="0.02,0.01"
 
 echo "============================================================"
 echo "WAVE DISPLAY EXPORT - CHUNKED MESHES"

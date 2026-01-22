@@ -112,12 +112,20 @@ The script runs fully automated in Blender's background mode, so no manual inter
 
 If you're placing meshes side by side to create an infinite scrollable wave, you can apply seamless blending to eliminate visible seams between adjacent meshes.
 
-#### Step 1: One-time setup in Blender
+The exported meshes have distorted/curved edges due to decimation. The blending script:
+1. Cuts away the distorted edges (~3% of mesh width) from both left and right sides
+2. Blends the remaining edge vertices toward the original simulation data (not exported OBJ)
+
+This removes the curved edges and creates smooth transitions using accurate source data.
+
+#### Step 1: One-time setup - Position reference mesh in Blender (REQUIRED)
+
+The reference mesh is **required** to determine the exact position offset where adjacent meshes are placed.
 
 1. Open the simulation Blender file
-2. Import a reference mesh (e.g., an OBJ from frame 85)
-3. Position it exactly where it would be placed adjacent to frame 0 in Unreal
-4. Name the imported mesh (e.g., "frame_85_reference")
+2. Import a reference mesh (e.g., an OBJ from the frame that will be placed adjacent - typically frame N-95)
+3. Position it exactly where it would be placed adjacent to frame 0 in Unreal (edge-to-edge)
+4. Name the imported mesh (e.g., "frame_857_reference")
 5. Save the Blender file
 
 #### Step 2: Run the blending script
@@ -125,24 +133,26 @@ If you're placing meshes side by side to create an infinite scrollable wave, you
 ```bash
 python apply_seamless_blending.py \
     --blend-file ../3dmodels/breaking_waves_beach_break_2.blend \
-    --reference-mesh "frame_85_reference" \
+    --reference-mesh "frame_857_reference" \
     --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05 \
-    --output /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05_seamless \
-    --frame-offset 85
+    --frame-offset -95
 ```
 
 **Parameters**:
-- `--blend-file`: Path to the Blender file with the positioned reference mesh
-- `--reference-mesh`: Name of the reference mesh in Blender (used to get position offset)
+- `--blend-file`: Path to the Blender simulation file (for reading original vertex positions AND reference mesh)
+- `--reference-mesh`: **REQUIRED** - Name of reference mesh in Blender that defines adjacent mesh position
 - `--input`: Folder containing exported OBJ files
 - `--output`: Output folder for blended meshes (default: `/tmp/seamless_blended_meshes`)
-- `--frame-offset`: Frame difference between adjacent meshes (default: 85)
-- `--blend-width`: Blend zone width as percentage of mesh width (default: 5.0)
+- `--frame-offset`: Frame offset to adjacent mesh (default: -95, negative = earlier frame)
+- `--cut-width`: Width of edge to cut away as percentage (default: 3.0)
+- `--blend-width`: Blend zone width as percentage (default: 3.0)
 - `--blend-axis`: Axis along which meshes are placed: x, y, or z (default: x)
-- `--blend-direction`: Which edge to blend: positive or negative (default: positive)
-- `--edge-chunk`: X index of edge chunks to blend (default: 2 for 3x1 grid)
+- `--left-edge-chunk`: X index of left edge chunks (default: 0)
+- `--right-edge-chunk`: X index of right edge chunks (default: 2 for 3x1 grid)
 
-The script reads the reference mesh position from Blender, then modifies only the edge chunk vertices in the blend zone, smoothly interpolating them toward the corresponding vertices in frame N+offset.
+The script reads the reference mesh position to determine the exact offset, then loads original simulation vertex data for blending. For each frame N:
+- Right edge blends toward frame N+offset (the mesh placed to the right)
+- Left edge blends toward frame N-offset (the mesh placed to the left)
 
 ## Import the alembic animation into UE4
 

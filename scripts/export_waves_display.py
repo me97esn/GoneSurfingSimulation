@@ -1,12 +1,15 @@
 """
 Export wave animation as chunked OBJ meshes at multiple quality levels.
 This script is designed to be run inside Blender (via command line).
+
+Includes seamless edge blending for infinite wave tiling.
 """
 import bpy
 import os
 import sys
 import bmesh
 import time
+import math
 from mathutils import Vector
 
 # Get command-line arguments passed after --
@@ -15,8 +18,8 @@ argv = argv[argv.index("--") + 1:] if "--" in argv else []
 
 if len(argv) < 4:
     print("Error: Missing required arguments")
-    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing]")
-    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip")
+    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing] [frame_offset] [reference_mesh]")
+    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip -95 1_0_mesh_903_reference")
     sys.exit(1)
 
 start_frame = int(argv[0])
@@ -24,15 +27,23 @@ end_frame = int(argv[1])
 output_base_dir = argv[2]
 quality_levels = [float(x) for x in argv[3].split(',')]
 skip_existing = argv[4] if len(argv) > 4 else 'skip'
+frame_offset = int(argv[5]) if len(argv) > 5 else -95
+reference_mesh_name = argv[6] if len(argv) > 6 else '1_0_mesh_903_reference'
+
+# Seamless blending configuration
+BLEND_WIDTH_PERCENT = 3.0  # Width of blend zone as percentage of mesh extent
 
 print(f"="*60)
-print(f"WAVE DISPLAY EXPORT")
+print(f"WAVE DISPLAY EXPORT (with seamless blending)")
 print(f"="*60)
 print(f"Start frame: {start_frame}")
 print(f"End frame: {end_frame}")
 print(f"Output base directory: {output_base_dir}")
 print(f"Quality levels (decimate ratios): {quality_levels}")
 print(f"Skip existing files: {skip_existing}")
+print(f"Frame offset for blending: {frame_offset}")
+print(f"Reference mesh: {reference_mesh_name}")
+print(f"Blend width: {BLEND_WIDTH_PERCENT}%")
 print(f"="*60)
 
 # Configuration
@@ -40,6 +51,159 @@ CHUNKS_X = 3  # Split 3 times along longest axis
 CHUNKS_Y = 1  # Split 1 time along second longest axis
 FLUID_SURFACE_NAME = 'fluid_surface'
 BOOL_BOUNDARY_NAME = 'BoolBoundary'
+
+
+def smoothstep(t):
+    """Smooth interpolation function (ease-in-out)"""
+    t = max(0.0, min(1.0, t))
+    return t * t * (3.0 - 2.0 * t)
+
+
+def get_reference_mesh_offset(reference_mesh_name):
+    """Get the position offset from the reference mesh"""
+    ref_obj = bpy.data.objects.get(reference_mesh_name)
+    if ref_obj:
+        return ref_obj.location.copy()
+    else:
+        print(f"  Warning: Reference mesh '{reference_mesh_name}' not found")
+        return None
+
+
+def apply_seamless_blending(work_obj, fluid_surface, current_frame, frame_offset, reference_offset, blend_axis_idx, blend_width_percent):
+    """
+    Apply seamless edge blending to mesh vertices BEFORE decimation.
+
+    Since the simulation mesh has consistent vertex topology across frames,
+    we can blend vertices by index (no spatial matching needed).
+
+    Args:
+        work_obj: The working mesh object to modify (current frame)
+        fluid_surface: The original fluid surface object
+        current_frame: Current frame number
+        frame_offset: Frame offset to adjacent mesh (e.g., -95)
+        reference_offset: Position offset from reference mesh
+        blend_axis_idx: Axis index to blend along (0=x, 1=y, 2=z)
+        blend_width_percent: Width of blend zone as percentage
+    """
+    # Get target frame (the frame that will be placed adjacent)
+    # frame_offset is negative, so target_frame = current_frame + (-95) = earlier frame
+    target_frame = current_frame + frame_offset
+
+    print(f"  Seamless blending: frame {current_frame} edges toward frame {target_frame}")
+
+    # Store current frame
+    original_frame = bpy.context.scene.frame_current
+
+    # Get current frame's mesh data (already in work_obj)
+    current_mesh = work_obj.data
+    current_verts = [v.co.copy() for v in current_mesh.vertices]
+
+    # Get mesh bounds along blend axis
+    axis_values = [v[blend_axis_idx] for v in current_verts]
+    mesh_min = min(axis_values)
+    mesh_max = max(axis_values)
+    mesh_extent = mesh_max - mesh_min
+    blend_width = mesh_extent * (blend_width_percent / 100.0)
+
+    # Calculate blend zones
+    # Positive edge (max value) - blends toward mesh in positive direction
+    positive_blend_start = mesh_max - blend_width
+    # Negative edge (min value) - blends toward mesh in negative direction
+    negative_blend_end = mesh_min + blend_width
+
+    print(f"    Mesh bounds on axis {blend_axis_idx}: [{mesh_min:.2f}, {mesh_max:.2f}]")
+    print(f"    Blend width: {blend_width:.2f} ({blend_width_percent}%)")
+    print(f"    Positive edge blend zone: [{positive_blend_start:.2f}, {mesh_max:.2f}]")
+    print(f"    Negative edge blend zone: [{mesh_min:.2f}, {negative_blend_end:.2f}]")
+
+    # Set to target frame and get target mesh vertices
+    bpy.context.scene.frame_set(target_frame)
+
+    # Get evaluated mesh at target frame
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_obj = fluid_surface.evaluated_get(depsgraph)
+    target_mesh = eval_obj.to_mesh()
+
+    if len(target_mesh.vertices) != len(current_verts):
+        print(f"    Warning: Vertex count mismatch! Current: {len(current_verts)}, Target: {len(target_mesh.vertices)}")
+        print(f"    Skipping seamless blending for this frame")
+        eval_obj.to_mesh_clear()
+        bpy.context.scene.frame_set(original_frame)
+        return
+
+    # Get target vertices with world transform applied
+    target_matrix = eval_obj.matrix_world
+    target_verts = [(target_matrix @ v.co) for v in target_mesh.vertices]
+
+    # Determine offset direction based on reference mesh position
+    ref_axis_offset = reference_offset[blend_axis_idx]
+    if ref_axis_offset < 0:
+        # Reference mesh is in negative direction
+        mesh_offset_negative = ref_axis_offset
+        mesh_offset_positive = -ref_axis_offset
+    else:
+        mesh_offset_positive = ref_axis_offset
+        mesh_offset_negative = -ref_axis_offset
+
+    print(f"    Reference offset on blend axis: {ref_axis_offset:.2f}")
+    print(f"    Offset for positive edge: {mesh_offset_positive:.2f}")
+    print(f"    Offset for negative edge: {mesh_offset_negative:.2f}")
+
+    # Apply blending
+    blended_positive = 0
+    blended_negative = 0
+
+    # Get current mesh world matrix for vertex positions
+    current_matrix = work_obj.matrix_world
+
+    for i, vert in enumerate(current_mesh.vertices):
+        # Get world position
+        world_pos = current_matrix @ vert.co
+        axis_pos = world_pos[blend_axis_idx]
+
+        # Check positive edge blend zone
+        if axis_pos >= positive_blend_start:
+            blend_factor = (axis_pos - positive_blend_start) / blend_width if blend_width > 0 else 0
+            smooth_factor = smoothstep(blend_factor)
+
+            # Target position: target vertex's negative edge + positive offset
+            # We want the minimum (negative edge) of the target mesh, offset to positive direction
+            target_pos = target_verts[i].copy()
+            target_pos[blend_axis_idx] += mesh_offset_positive
+
+            # Blend in world space
+            new_world_pos = world_pos.lerp(target_pos, smooth_factor)
+
+            # Convert back to local space
+            vert.co = current_matrix.inverted() @ new_world_pos
+            blended_positive += 1
+
+        # Check negative edge blend zone
+        elif axis_pos <= negative_blend_end:
+            blend_factor = (negative_blend_end - axis_pos) / blend_width if blend_width > 0 else 0
+            smooth_factor = smoothstep(blend_factor)
+
+            # Target position: target vertex's positive edge + negative offset
+            target_pos = target_verts[i].copy()
+            target_pos[blend_axis_idx] += mesh_offset_negative
+
+            # Blend in world space
+            new_world_pos = world_pos.lerp(target_pos, smooth_factor)
+
+            # Convert back to local space
+            vert.co = current_matrix.inverted() @ new_world_pos
+            blended_negative += 1
+
+    print(f"    Blended {blended_positive} vertices on positive edge, {blended_negative} on negative edge")
+
+    # Cleanup
+    eval_obj.to_mesh_clear()
+
+    # Restore original frame
+    bpy.context.scene.frame_set(original_frame)
+
+    # Update mesh
+    current_mesh.update()
 
 def get_mesh_bounds(obj):
     """Get the bounding box of a mesh object in world space"""
@@ -126,7 +290,7 @@ def split_mesh_into_chunks(obj, chunks_x, chunks_y):
 
     return chunks
 
-def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True):
+def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True, blend_config=None):
     """Export all chunks for a single frame at specified quality using fixed world coordinates"""
     # Check if all chunks for this frame already exist
     # For 3x1 configuration: we export 2 files (0_0 contains chunks 0&2, 1_0 is middle chunk)
@@ -164,6 +328,30 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
         print(f"  Added Boolean modifier with {BOOL_BOUNDARY_NAME}")
     else:
         print(f"  Warning: {BOOL_BOUNDARY_NAME} not found, skipping boolean modifier")
+
+    # Apply seamless blending BEFORE decimation (if configured)
+    if blend_config and blend_config.get('enabled', False):
+        # Apply boolean modifier first to get the correct mesh shape
+        bpy.context.view_layer.objects.active = work_obj
+        work_obj.select_set(True)
+        if bool_boundary and "Boolean" in work_obj.modifiers:
+            # Ensure modifier is enabled before applying
+            bool_mod = work_obj.modifiers["Boolean"]
+            bool_mod.show_viewport = True
+            bool_mod.show_render = True
+            bpy.ops.object.modifier_apply(modifier="Boolean")
+            print(f"  Applied Boolean modifier for blending")
+
+        # Apply seamless blending to the mesh vertices
+        apply_seamless_blending(
+            work_obj=work_obj,
+            fluid_surface=fluid_surface,
+            current_frame=frame,
+            frame_offset=blend_config['frame_offset'],
+            reference_offset=blend_config['reference_offset'],
+            blend_axis_idx=blend_config['blend_axis_idx'],
+            blend_width_percent=blend_config['blend_width_percent']
+        )
 
     # FR-3: Add decimate modifier
     decimate_mod = work_obj.modifiers.new(name="Decimate", type='DECIMATE')
@@ -498,6 +686,34 @@ bpy.data.objects.remove(temp_obj)
 bpy.data.objects.remove(temp_final)
 bpy.data.meshes.remove(temp_mesh)
 
+# Set up seamless blending configuration
+print(f"\n{'='*60}")
+print(f"Setting up seamless blending")
+print(f"{'='*60}")
+
+blend_config = None
+reference_offset = get_reference_mesh_offset(reference_mesh_name)
+if reference_offset:
+    # Determine blend axis from reference mesh (largest offset component)
+    abs_offsets = [abs(reference_offset.x), abs(reference_offset.y), abs(reference_offset.z)]
+    blend_axis_idx = abs_offsets.index(max(abs_offsets))
+    axis_names = ['x', 'y', 'z']
+
+    print(f"Reference mesh '{reference_mesh_name}' found at position: {reference_offset}")
+    print(f"Blend axis (largest offset): {axis_names[blend_axis_idx]} (offset: {reference_offset[blend_axis_idx]:.2f})")
+
+    blend_config = {
+        'enabled': True,
+        'frame_offset': frame_offset,
+        'reference_offset': reference_offset,
+        'blend_axis_idx': blend_axis_idx,
+        'blend_width_percent': BLEND_WIDTH_PERCENT
+    }
+    print(f"Seamless blending ENABLED")
+else:
+    print(f"Warning: Reference mesh '{reference_mesh_name}' not found")
+    print(f"Seamless blending DISABLED - edges will not be blended")
+
 # Convert skip_existing string to boolean
 skip_existing_files = (skip_existing.lower() == 'skip')
 
@@ -523,7 +739,7 @@ for quality_idx, quality_ratio in enumerate(quality_levels):
         frame_start_time = time.time()
 
         print(f"\nFrame {frame}:")
-        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files)
+        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files, blend_config)
 
         # Calculate time for this frame
         frame_duration = time.time() - frame_start_time

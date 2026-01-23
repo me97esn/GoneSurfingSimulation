@@ -114,9 +114,9 @@ If you're placing meshes side by side to create an infinite scrollable wave, you
 
 The exported meshes have distorted/curved edges due to decimation. The blending script:
 1. Cuts away the distorted edges (~3% of mesh width) from both left and right sides
-2. Blends the remaining edge vertices toward the original simulation data (not exported OBJ)
+2. Blends the remaining edge vertices toward adjacent frame's exported OBJ mesh edges
 
-This removes the curved edges and creates smooth transitions using accurate source data.
+This removes the curved edges and creates smooth transitions using matching decimated mesh data (OBJ-to-OBJ blending).
 
 #### Step 1: One-time setup - Position reference mesh in Blender (REQUIRED)
 
@@ -124,8 +124,9 @@ The reference mesh is **required** to determine the exact position offset where 
 
 1. Open the simulation Blender file
 2. Import a reference mesh (e.g., an OBJ from the frame that will be placed adjacent - typically frame N-95)
+   - Use import settings: Forward=X, Up=Z (to match export settings)
 3. Position it exactly where it would be placed adjacent to frame 0 in Unreal (edge-to-edge)
-4. Name the imported mesh (e.g., "frame_857_reference")
+4. Name the imported mesh `1_0_mesh_903_reference` (this is the default name the script looks for)
 5. Save the Blender file
 
 #### Step 2: Run the blending script
@@ -133,14 +134,12 @@ The reference mesh is **required** to determine the exact position offset where 
 ```bash
 python apply_seamless_blending.py \
     --blend-file ../3dmodels/breaking_waves_beach_break_2.blend \
-    --reference-mesh "frame_857_reference" \
-    --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05 \
-    --frame-offset -95
+    --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05
 ```
 
 **Parameters**:
-- `--blend-file`: Path to the Blender simulation file (for reading original vertex positions AND reference mesh)
-- `--reference-mesh`: **REQUIRED** - Name of reference mesh in Blender that defines adjacent mesh position
+- `--blend-file`: Path to the Blender simulation file (for reading reference mesh position ONLY)
+- `--reference-mesh`: Name of reference mesh in Blender (default: `1_0_mesh_903_reference`)
 - `--input`: Folder containing exported OBJ files
 - `--output`: Output folder for blended meshes (default: `/tmp/seamless_blended_meshes`)
 - `--frame-offset`: Frame offset to adjacent mesh (default: -95, negative = earlier frame)
@@ -150,9 +149,9 @@ python apply_seamless_blending.py \
 - `--left-edge-chunk`: X index of left edge chunks (default: 0)
 - `--right-edge-chunk`: X index of right edge chunks (default: 2 for 3x1 grid)
 
-The script reads the reference mesh position to determine the exact offset, then loads original simulation vertex data for blending. For each frame N:
-- Right edge blends toward frame N+offset (the mesh placed to the right)
-- Left edge blends toward frame N-offset (the mesh placed to the left)
+The script reads the reference mesh position to determine the exact offset, then loads adjacent frames' OBJ files for blending. For each frame N:
+- Right edge blends toward the LEFT edge of frame N+offset's OBJ (the mesh placed to the right)
+- Left edge blends toward the RIGHT edge of frame N-offset's OBJ (the mesh placed to the left)
 
 ## Import the alembic animation into UE4
 

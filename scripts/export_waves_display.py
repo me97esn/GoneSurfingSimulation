@@ -11,6 +11,7 @@ import bmesh
 import time
 import math
 from mathutils import Vector
+from mathutils.kdtree import KDTree
 
 # Get command-line arguments passed after --
 argv = sys.argv
@@ -69,141 +70,442 @@ def get_reference_mesh_offset(reference_mesh_name):
         return None
 
 
-def apply_seamless_blending(work_obj, fluid_surface, current_frame, frame_offset, reference_offset, blend_axis_idx, blend_width_percent):
+def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, reference_offset, blend_axis_idx, blend_width_percent):
     """
-    Apply seamless edge blending to mesh vertices BEFORE decimation.
+    Create a joined mesh from current frame and adjacent frame with blended overlap.
 
-    Since the simulation mesh has consistent vertex topology across frames,
-    we can blend vertices by index (no spatial matching needed).
+    This approach:
+    1. Gets the current frame mesh and the adjacent frame mesh
+    2. Positions the adjacent mesh at its tiling location (reference_offset)
+    3. Blends vertices in the overlapping region for smooth transition
+    4. Joins the meshes into a single continuous surface
 
     Args:
-        work_obj: The working mesh object to modify (current frame)
         fluid_surface: The original fluid surface object
         current_frame: Current frame number
         frame_offset: Frame offset to adjacent mesh (e.g., -95)
         reference_offset: Position offset from reference mesh
         blend_axis_idx: Axis index to blend along (0=x, 1=y, 2=z)
         blend_width_percent: Width of blend zone as percentage
+
+    Returns:
+        The joined mesh object with blended overlap
     """
-    # Get target frame (the frame that will be placed adjacent)
-    # frame_offset is negative, so target_frame = current_frame + (-95) = earlier frame
-    target_frame = current_frame + frame_offset
+    ref_axis_offset = reference_offset[blend_axis_idx]
 
-    print(f"  Seamless blending: frame {current_frame} edges toward frame {target_frame}")
+    # Determine which adjacent frame to use based on reference offset direction
+    # If ref_axis_offset < 0, the adjacent mesh is placed in negative direction
+    if ref_axis_offset < 0:
+        adjacent_frame = current_frame + frame_offset  # e.g., 903 + (-95) = 808
+    else:
+        adjacent_frame = current_frame - frame_offset
 
-    # Store current frame
+    print(f"  Creating joined blended mesh:")
+    print(f"    Current frame: {current_frame}")
+    print(f"    Adjacent frame: {adjacent_frame}")
+    print(f"    Reference offset on axis {blend_axis_idx}: {ref_axis_offset:.2f}")
+
+    # Store original frame
     original_frame = bpy.context.scene.frame_current
 
-    # Get current frame's mesh data (already in work_obj)
-    current_mesh = work_obj.data
-    current_verts = [v.co.copy() for v in current_mesh.vertices]
+    # Get current frame mesh
+    bpy.context.scene.frame_set(current_frame)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_current = fluid_surface.evaluated_get(depsgraph)
 
-    # Get mesh bounds along blend axis
-    axis_values = [v[blend_axis_idx] for v in current_verts]
+    current_obj = bpy.data.objects.new(f"current_{current_frame}", bpy.data.meshes.new_from_object(eval_current))
+    bpy.context.collection.objects.link(current_obj)
+
+    # Get current mesh bounds
+    current_matrix = current_obj.matrix_world
+    current_verts_world = [current_matrix @ v.co for v in current_obj.data.vertices]
+    current_axis_values = [v[blend_axis_idx] for v in current_verts_world]
+    current_min = min(current_axis_values)
+    current_max = max(current_axis_values)
+    current_extent = current_max - current_min
+
+    print(f"    Current mesh bounds on axis {blend_axis_idx}: [{current_min:.2f}, {current_max:.2f}]")
+
+    # Get adjacent frame mesh
+    bpy.context.scene.frame_set(adjacent_frame)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_adjacent = fluid_surface.evaluated_get(depsgraph)
+
+    adjacent_obj = bpy.data.objects.new(f"adjacent_{adjacent_frame}", bpy.data.meshes.new_from_object(eval_adjacent))
+    bpy.context.collection.objects.link(adjacent_obj)
+
+    # Position adjacent mesh at its tiling location
+    adjacent_obj.location[blend_axis_idx] = ref_axis_offset
+
+    # Apply the location transform to the mesh data
+    bpy.context.view_layer.objects.active = adjacent_obj
+    adjacent_obj.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+
+    # Get adjacent mesh bounds (after positioning)
+    adjacent_matrix = adjacent_obj.matrix_world
+    adjacent_verts_world = [adjacent_matrix @ v.co for v in adjacent_obj.data.vertices]
+    adjacent_axis_values = [v[blend_axis_idx] for v in adjacent_verts_world]
+    adjacent_min = min(adjacent_axis_values)
+    adjacent_max = max(adjacent_axis_values)
+
+    print(f"    Adjacent mesh bounds on axis {blend_axis_idx}: [{adjacent_min:.2f}, {adjacent_max:.2f}]")
+
+    # Calculate overlap region
+    overlap_start = max(current_min, adjacent_min)
+    overlap_end = min(current_max, adjacent_max)
+    overlap_width = overlap_end - overlap_start
+
+    print(f"    Overlap region: [{overlap_start:.2f}, {overlap_end:.2f}] (width: {overlap_width:.2f})")
+
+    if overlap_width <= 0:
+        gap_width = -overlap_width
+        print(f"    Gap between meshes: {gap_width:.2f} units - blending edge vertices to close gap")
+
+        # For a gap, we need to move edge vertices toward each other
+        # The edge of current mesh closest to the gap, and edge of adjacent mesh closest to the gap
+        # Meet in the middle
+
+        non_blend_axes = [i for i in range(3) if i != blend_axis_idx]
+
+        # Determine which edges are facing the gap
+        if ref_axis_offset < 0:
+            # Adjacent is in negative direction
+            # Current's MIN edge faces the gap, Adjacent's MAX edge faces the gap
+            current_gap_edge = current_min
+            adjacent_gap_edge = adjacent_max
+            gap_center = (current_min + adjacent_max) / 2.0
+        else:
+            # Adjacent is in positive direction
+            current_gap_edge = current_max
+            adjacent_gap_edge = adjacent_min
+            gap_center = (current_max + adjacent_min) / 2.0
+
+        print(f"    Current edge at gap: {current_gap_edge:.2f}")
+        print(f"    Adjacent edge at gap: {adjacent_gap_edge:.2f}")
+        print(f"    Gap center: {gap_center:.2f}")
+
+        # Define blend zone width (use a percentage of the mesh extent or a fixed amount)
+        blend_zone_width = max(gap_width * 3, current_extent * 0.03)  # At least 3x gap width or 3% of mesh
+        print(f"    Blend zone width: {blend_zone_width:.2f}")
+
+        # Build KD-trees for spatial matching (using non-blend axes)
+        current_world_verts = [current_matrix @ v.co.copy() for v in current_obj.data.vertices]
+        adjacent_world_verts = [adjacent_matrix @ v.co.copy() for v in adjacent_obj.data.vertices]
+
+        adjacent_kd = KDTree(len(adjacent_world_verts))
+        for i, v in enumerate(adjacent_world_verts):
+            match_pos = Vector((v[non_blend_axes[0]], v[non_blend_axes[1]], 0))
+            adjacent_kd.insert(match_pos, i)
+        adjacent_kd.balance()
+
+        current_kd = KDTree(len(current_world_verts))
+        for i, v in enumerate(current_world_verts):
+            match_pos = Vector((v[non_blend_axes[0]], v[non_blend_axes[1]], 0))
+            current_kd.insert(match_pos, i)
+        current_kd.balance()
+
+        blended_current = 0
+        blended_adjacent = 0
+
+        # Blend current mesh vertices near the gap edge
+        for i, vert in enumerate(current_obj.data.vertices):
+            world_pos = current_world_verts[i]
+            axis_pos = world_pos[blend_axis_idx]
+
+            # Check if vertex is in the blend zone (near the gap edge)
+            if ref_axis_offset < 0:
+                # Current's MIN edge faces gap
+                dist_from_edge = axis_pos - current_gap_edge
+                if 0 <= dist_from_edge <= blend_zone_width:
+                    # Blend factor: 1 at edge (move fully), 0 at blend_zone_width (don't move)
+                    blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
+                    smooth_factor = smoothstep(blend_factor)
+
+                    # Find matching vertex on adjacent mesh
+                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+                    co, idx, dist = adjacent_kd.find(match_pos)
+                    if idx is not None:
+                        target_pos = adjacent_world_verts[idx]
+                        # Move toward the target, scaled by blend factor
+                        # At edge: move to meet at gap center (lerp toward target)
+                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)  # 0.5 = meet halfway
+                        vert.co = current_matrix.inverted() @ new_world_pos
+                        blended_current += 1
+            else:
+                # Current's MAX edge faces gap
+                dist_from_edge = current_gap_edge - axis_pos
+                if 0 <= dist_from_edge <= blend_zone_width:
+                    blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
+                    smooth_factor = smoothstep(blend_factor)
+
+                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+                    co, idx, dist = adjacent_kd.find(match_pos)
+                    if idx is not None:
+                        target_pos = adjacent_world_verts[idx]
+                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                        vert.co = current_matrix.inverted() @ new_world_pos
+                        blended_current += 1
+
+        current_obj.data.update()
+
+        # Blend adjacent mesh vertices near the gap edge
+        for i, vert in enumerate(adjacent_obj.data.vertices):
+            world_pos = adjacent_world_verts[i]
+            axis_pos = world_pos[blend_axis_idx]
+
+            if ref_axis_offset < 0:
+                # Adjacent's MAX edge faces gap
+                dist_from_edge = adjacent_gap_edge - axis_pos
+                if 0 <= dist_from_edge <= blend_zone_width:
+                    blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
+                    smooth_factor = smoothstep(blend_factor)
+
+                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+                    co, idx, dist = current_kd.find(match_pos)
+                    if idx is not None:
+                        target_pos = current_world_verts[idx]
+                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                        vert.co = adjacent_matrix.inverted() @ new_world_pos
+                        blended_adjacent += 1
+            else:
+                # Adjacent's MIN edge faces gap
+                dist_from_edge = axis_pos - adjacent_gap_edge
+                if 0 <= dist_from_edge <= blend_zone_width:
+                    blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
+                    smooth_factor = smoothstep(blend_factor)
+
+                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+                    co, idx, dist = current_kd.find(match_pos)
+                    if idx is not None:
+                        target_pos = current_world_verts[idx]
+                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                        vert.co = adjacent_matrix.inverted() @ new_world_pos
+                        blended_adjacent += 1
+
+        adjacent_obj.data.update()
+
+        print(f"    Blended {blended_current} current mesh vertices, {blended_adjacent} adjacent mesh vertices")
+
+        # Join the meshes
+        bpy.ops.object.select_all(action='DESELECT')
+        current_obj.select_set(True)
+        adjacent_obj.select_set(True)
+        bpy.context.view_layer.objects.active = current_obj
+        bpy.ops.object.join()
+
+        # Merge close vertices at the seam
+        print(f"    Merging close vertices at the gap seam...")
+        bm_merged = bmesh.new()
+        bm_merged.from_mesh(current_obj.data)
+        verts_before = len(bm_merged.verts)
+
+        bmesh.ops.remove_doubles(bm_merged, verts=bm_merged.verts, dist=0.1)
+
+        print(f"    Merged vertices: {len(bm_merged.verts)} (was {verts_before}, removed {verts_before - len(bm_merged.verts)})")
+
+        bm_merged.to_mesh(current_obj.data)
+        bm_merged.free()
+        current_obj.data.update()
+
+        joined_obj = current_obj
+        joined_obj.name = f"joined_{current_frame}"
+        print(f"    Joined mesh: {len(joined_obj.data.vertices)} vertices, {len(joined_obj.data.polygons)} faces")
+
+        bpy.context.scene.frame_set(original_frame)
+        return joined_obj
+
+    # Blend vertices in the overlap region
+    # Current mesh: vertices near the edge toward adjacent mesh blend toward adjacent positions
+    # Adjacent mesh: vertices near the edge toward current mesh blend toward current positions
+
+    non_blend_axes = [i for i in range(3) if i != blend_axis_idx]
+
+    # Determine which direction to blend based on overlap position
+    # If adjacent mesh is in negative direction (ref_axis_offset < 0):
+    #   - Current mesh's MIN edge overlaps with adjacent mesh's MAX edge
+    #   - Blend current vertices near current_min toward adjacent vertices
+    #   - Blend adjacent vertices near adjacent_max toward current vertices
+
+    if ref_axis_offset < 0:
+        # Adjacent is in negative direction
+        # Current's min edge meets adjacent's max edge
+        current_blend_edge = current_min
+        adjacent_blend_edge = adjacent_max
+        # Blend zone for current: from current_min to current_min + overlap_width
+        # Blend zone for adjacent: from adjacent_max - overlap_width to adjacent_max
+    else:
+        # Adjacent is in positive direction
+        current_blend_edge = current_max
+        adjacent_blend_edge = adjacent_min
+
+    # Collect world positions of both meshes for matching
+    current_world_verts = [current_matrix @ v.co.copy() for v in current_obj.data.vertices]
+    adjacent_world_verts = [adjacent_matrix @ v.co.copy() for v in adjacent_obj.data.vertices]
+
+    # Build KD-trees for fast spatial lookups (using non-blend axes for matching)
+    print(f"    Building KD-trees for spatial matching...")
+
+    # KD-tree for adjacent mesh vertices
+    adjacent_kd = KDTree(len(adjacent_world_verts))
+    for i, v in enumerate(adjacent_world_verts):
+        # Use position on non-blend axes for matching
+        match_pos = Vector((v[non_blend_axes[0]], v[non_blend_axes[1]], 0))
+        adjacent_kd.insert(match_pos, i)
+    adjacent_kd.balance()
+
+    # KD-tree for current mesh vertices
+    current_kd = KDTree(len(current_world_verts))
+    for i, v in enumerate(current_world_verts):
+        match_pos = Vector((v[non_blend_axes[0]], v[non_blend_axes[1]], 0))
+        current_kd.insert(match_pos, i)
+    current_kd.balance()
+
+    print(f"    KD-trees built")
+
+    blended_current = 0
+    blended_adjacent = 0
+
+    # Blend current mesh vertices in overlap region
+    for i, vert in enumerate(current_obj.data.vertices):
+        world_pos = current_world_verts[i]
+        axis_pos = world_pos[blend_axis_idx]
+
+        # Check if vertex is in overlap region
+        if overlap_start <= axis_pos <= overlap_end:
+            # Calculate blend factor based on position in overlap
+            if ref_axis_offset < 0:
+                # Blending from current_min toward overlap_end
+                # At current_min (overlap_start): blend_factor = 1 (fully toward adjacent)
+                # At overlap_end: blend_factor = 0 (keep current)
+                blend_factor = 1.0 - (axis_pos - overlap_start) / overlap_width
+            else:
+                # Blending from current_max toward overlap_start
+                blend_factor = (axis_pos - overlap_start) / overlap_width
+
+            smooth_factor = smoothstep(blend_factor)
+
+            # Find closest adjacent vertex using KD-tree
+            match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+            co, idx, dist = adjacent_kd.find(match_pos)
+            if idx is not None:
+                target_pos = adjacent_world_verts[idx]
+                # Blend position
+                new_world_pos = world_pos.lerp(target_pos, smooth_factor)
+                vert.co = current_matrix.inverted() @ new_world_pos
+                blended_current += 1
+
+    current_obj.data.update()
+
+    # Blend adjacent mesh vertices in overlap region
+    for i, vert in enumerate(adjacent_obj.data.vertices):
+        world_pos = adjacent_world_verts[i]
+        axis_pos = world_pos[blend_axis_idx]
+
+        # Check if vertex is in overlap region
+        if overlap_start <= axis_pos <= overlap_end:
+            # Calculate blend factor (opposite direction from current mesh)
+            if ref_axis_offset < 0:
+                # At overlap_start: blend_factor = 0 (keep adjacent)
+                # At overlap_end (adjacent_max): blend_factor = 1 (fully toward current)
+                blend_factor = (axis_pos - overlap_start) / overlap_width
+            else:
+                blend_factor = 1.0 - (axis_pos - overlap_start) / overlap_width
+
+            smooth_factor = smoothstep(blend_factor)
+
+            # Find closest current vertex using KD-tree
+            match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
+            co, idx, dist = current_kd.find(match_pos)
+            if idx is not None:
+                target_pos = current_world_verts[idx]
+                # Blend position
+                new_world_pos = world_pos.lerp(target_pos, smooth_factor)
+                vert.co = adjacent_matrix.inverted() @ new_world_pos
+                blended_adjacent += 1
+
+    adjacent_obj.data.update()
+
+    print(f"    Blended {blended_current} current mesh vertices, {blended_adjacent} adjacent mesh vertices")
+
+    # Join the meshes
+    bpy.ops.object.select_all(action='DESELECT')
+    current_obj.select_set(True)
+    adjacent_obj.select_set(True)
+    bpy.context.view_layer.objects.active = current_obj
+    bpy.ops.object.join()
+
+    # IMPORTANT: Merge close vertices to eliminate double geometry in overlap region
+    # The blending moved vertices toward each other, so they should be close enough to merge
+    print(f"    Merging close vertices to eliminate double geometry...")
+    bm_merged = bmesh.new()
+    bm_merged.from_mesh(current_obj.data)
+    verts_before = len(bm_merged.verts)
+
+    # Merge vertices that are very close together (within 0.1 units)
+    bmesh.ops.remove_doubles(bm_merged, verts=bm_merged.verts, dist=0.1)
+
+    print(f"    Merged vertices: {len(bm_merged.verts)} (was {verts_before}, removed {verts_before - len(bm_merged.verts)})")
+
+    bm_merged.to_mesh(current_obj.data)
+    bm_merged.free()
+    current_obj.data.update()
+
+    # The joined mesh is now in current_obj
+    joined_obj = current_obj
+    joined_obj.name = f"joined_{current_frame}"
+
+    print(f"    Joined mesh: {len(joined_obj.data.vertices)} vertices, {len(joined_obj.data.polygons)} faces")
+
+    # Restore original frame
+    bpy.context.scene.frame_set(original_frame)
+
+    return joined_obj
+
+
+def create_edge_vertex_group(work_obj, blend_axis_idx, blend_width_percent):
+    """
+    Create a vertex group containing edge vertices that should be preserved during decimation.
+
+    Vertices at the edges get weight 0 (preserve), middle vertices get weight 1 (decimate).
+    """
+    mesh = work_obj.data
+    matrix = work_obj.matrix_world
+
+    # Get world positions
+    world_verts = [matrix @ v.co for v in mesh.vertices]
+
+    # Get bounds along blend axis
+    axis_values = [v[blend_axis_idx] for v in world_verts]
     mesh_min = min(axis_values)
     mesh_max = max(axis_values)
     mesh_extent = mesh_max - mesh_min
     blend_width = mesh_extent * (blend_width_percent / 100.0)
 
-    # Calculate blend zones
-    # Positive edge (max value) - blends toward mesh in positive direction
-    positive_blend_start = mesh_max - blend_width
-    # Negative edge (min value) - blends toward mesh in negative direction
-    negative_blend_end = mesh_min + blend_width
-
-    print(f"    Mesh bounds on axis {blend_axis_idx}: [{mesh_min:.2f}, {mesh_max:.2f}]")
-    print(f"    Blend width: {blend_width:.2f} ({blend_width_percent}%)")
-    print(f"    Positive edge blend zone: [{positive_blend_start:.2f}, {mesh_max:.2f}]")
-    print(f"    Negative edge blend zone: [{mesh_min:.2f}, {negative_blend_end:.2f}]")
-
-    # Set to target frame and get target mesh vertices
-    bpy.context.scene.frame_set(target_frame)
-
-    # Get evaluated mesh at target frame
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    eval_obj = fluid_surface.evaluated_get(depsgraph)
-    target_mesh = eval_obj.to_mesh()
-
-    if len(target_mesh.vertices) != len(current_verts):
-        print(f"    Warning: Vertex count mismatch! Current: {len(current_verts)}, Target: {len(target_mesh.vertices)}")
-        print(f"    Skipping seamless blending for this frame")
-        eval_obj.to_mesh_clear()
-        bpy.context.scene.frame_set(original_frame)
-        return
-
-    # Get target vertices with world transform applied
-    target_matrix = eval_obj.matrix_world
-    target_verts = [(target_matrix @ v.co) for v in target_mesh.vertices]
-
-    # Determine offset direction based on reference mesh position
-    ref_axis_offset = reference_offset[blend_axis_idx]
-    if ref_axis_offset < 0:
-        # Reference mesh is in negative direction
-        mesh_offset_negative = ref_axis_offset
-        mesh_offset_positive = -ref_axis_offset
+    # Create or get vertex group
+    vg_name = "EdgePreserve"
+    if vg_name in work_obj.vertex_groups:
+        vg = work_obj.vertex_groups[vg_name]
     else:
-        mesh_offset_positive = ref_axis_offset
-        mesh_offset_negative = -ref_axis_offset
+        vg = work_obj.vertex_groups.new(name=vg_name)
 
-    print(f"    Reference offset on blend axis: {ref_axis_offset:.2f}")
-    print(f"    Offset for positive edge: {mesh_offset_positive:.2f}")
-    print(f"    Offset for negative edge: {mesh_offset_negative:.2f}")
+    # Assign weights: 0 = preserve (don't decimate), 1 = decimate normally
+    edge_count = 0
+    for i, vert in enumerate(mesh.vertices):
+        axis_pos = world_verts[i][blend_axis_idx]
 
-    # Apply blending
-    blended_positive = 0
-    blended_negative = 0
+        # Check if vertex is in edge zone
+        if axis_pos >= mesh_max - blend_width or axis_pos <= mesh_min + blend_width:
+            # Edge vertex - weight 0 means preserve
+            vg.add([i], 0.0, 'REPLACE')
+            edge_count += 1
+        else:
+            # Middle vertex - weight 1 means normal decimation
+            vg.add([i], 1.0, 'REPLACE')
 
-    # Get current mesh world matrix for vertex positions
-    current_matrix = work_obj.matrix_world
+    print(f"  Created vertex group '{vg_name}': {edge_count} edge vertices (preserved), {len(mesh.vertices) - edge_count} middle vertices")
+    return vg_name
 
-    for i, vert in enumerate(current_mesh.vertices):
-        # Get world position
-        world_pos = current_matrix @ vert.co
-        axis_pos = world_pos[blend_axis_idx]
-
-        # Check positive edge blend zone
-        if axis_pos >= positive_blend_start:
-            blend_factor = (axis_pos - positive_blend_start) / blend_width if blend_width > 0 else 0
-            smooth_factor = smoothstep(blend_factor)
-
-            # Target position: target vertex's negative edge + positive offset
-            # We want the minimum (negative edge) of the target mesh, offset to positive direction
-            target_pos = target_verts[i].copy()
-            target_pos[blend_axis_idx] += mesh_offset_positive
-
-            # Blend in world space
-            new_world_pos = world_pos.lerp(target_pos, smooth_factor)
-
-            # Convert back to local space
-            vert.co = current_matrix.inverted() @ new_world_pos
-            blended_positive += 1
-
-        # Check negative edge blend zone
-        elif axis_pos <= negative_blend_end:
-            blend_factor = (negative_blend_end - axis_pos) / blend_width if blend_width > 0 else 0
-            smooth_factor = smoothstep(blend_factor)
-
-            # Target position: target vertex's positive edge + negative offset
-            target_pos = target_verts[i].copy()
-            target_pos[blend_axis_idx] += mesh_offset_negative
-
-            # Blend in world space
-            new_world_pos = world_pos.lerp(target_pos, smooth_factor)
-
-            # Convert back to local space
-            vert.co = current_matrix.inverted() @ new_world_pos
-            blended_negative += 1
-
-    print(f"    Blended {blended_positive} vertices on positive edge, {blended_negative} on negative edge")
-
-    # Cleanup
-    eval_obj.to_mesh_clear()
-
-    # Restore original frame
-    bpy.context.scene.frame_set(original_frame)
-
-    # Update mesh
-    current_mesh.update()
 
 def get_mesh_bounds(obj):
     """Get the bounding box of a mesh object in world space"""
@@ -313,69 +615,128 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
     # Set the current frame
     bpy.context.scene.frame_set(frame)
 
-    # Get or create a working copy of the fluid surface
-    work_obj = fluid_surface.copy()
-    work_obj.data = fluid_surface.data.copy()
-    bpy.context.collection.objects.link(work_obj)
-    bpy.context.view_layer.objects.active = work_obj
-
-    # FR-2: Add boolean modifier (difference with BoolBoundary)
-    bool_boundary = bpy.data.objects.get(BOOL_BOUNDARY_NAME)
-    if bool_boundary:
-        bool_mod = work_obj.modifiers.new(name="Boolean", type='BOOLEAN')
-        bool_mod.operation = 'DIFFERENCE'
-        bool_mod.object = bool_boundary
-        print(f"  Added Boolean modifier with {BOOL_BOUNDARY_NAME}")
-    else:
-        print(f"  Warning: {BOOL_BOUNDARY_NAME} not found, skipping boolean modifier")
-
-    # Apply seamless blending BEFORE decimation (if configured)
+    # NEW APPROACH: Join meshes, blend overlap, then decimate
     if blend_config and blend_config.get('enabled', False):
-        # Apply boolean modifier first to get the correct mesh shape
-        bpy.context.view_layer.objects.active = work_obj
-        work_obj.select_set(True)
-        if bool_boundary and "Boolean" in work_obj.modifiers:
-            # Ensure modifier is enabled before applying
-            bool_mod = work_obj.modifiers["Boolean"]
-            bool_mod.show_viewport = True
-            bool_mod.show_render = True
-            bpy.ops.object.modifier_apply(modifier="Boolean")
-            print(f"  Applied Boolean modifier for blending")
+        print(f"  Using joined-mesh blending approach")
 
-        # Apply seamless blending to the mesh vertices
-        apply_seamless_blending(
-            work_obj=work_obj,
-            fluid_surface=fluid_surface,
-            current_frame=frame,
-            frame_offset=blend_config['frame_offset'],
-            reference_offset=blend_config['reference_offset'],
-            blend_axis_idx=blend_config['blend_axis_idx'],
-            blend_width_percent=blend_config['blend_width_percent']
+        # Create joined blended mesh (current frame + adjacent frame with blended overlap)
+        joined_obj = create_joined_blended_mesh(
+            fluid_surface,
+            frame,
+            blend_config['frame_offset'],
+            blend_config['reference_offset'],
+            blend_config['blend_axis_idx'],
+            blend_config['blend_width_percent']
         )
 
-    # FR-3: Add decimate modifier
-    decimate_mod = work_obj.modifiers.new(name="Decimate", type='DECIMATE')
-    decimate_mod.decimate_type = 'COLLAPSE'
-    decimate_mod.ratio = quality_ratio
-    print(f"  Added Decimate modifier with ratio {quality_ratio}")
+        # Store original bounds before any processing (we'll trim back to this + margin)
+        blend_axis_idx = blend_config['blend_axis_idx']
+        original_seam_min = blend_config['seam_boundaries']['min']
+        original_seam_max = blend_config['seam_boundaries']['max']
+        original_extent = original_seam_max - original_seam_min
+        trim_margin = original_extent * (blend_config['blend_width_percent'] / 100.0)
 
-    # Apply modifiers
-    bpy.context.view_layer.objects.active = work_obj
-    work_obj.select_set(True)
+        # Trim boundaries: original size + 3% on each side
+        trim_min = original_seam_min - trim_margin
+        trim_max = original_seam_max + trim_margin
 
-    # Apply modifiers by converting to mesh
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    eval_obj = work_obj.evaluated_get(depsgraph)
-    mesh = bpy.data.meshes.new_from_object(eval_obj)
-    final_obj = bpy.data.objects.new(f"processed_{frame}", mesh)
-    bpy.context.collection.objects.link(final_obj)
+        print(f"  Original seam bounds: [{original_seam_min:.2f}, {original_seam_max:.2f}]")
+        print(f"  Trim margin ({blend_config['blend_width_percent']}%): {trim_margin:.2f}")
+        print(f"  Trim bounds: [{trim_min:.2f}, {trim_max:.2f}]")
+
+        # Add decimate modifier to joined mesh
+        decimate_mod = joined_obj.modifiers.new(name="Decimate", type='DECIMATE')
+        decimate_mod.decimate_type = 'COLLAPSE'
+        decimate_mod.ratio = quality_ratio
+        print(f"  Added Decimate modifier with ratio {quality_ratio}")
+
+        # Apply decimate modifier
+        bpy.context.view_layer.objects.active = joined_obj
+        joined_obj.select_set(True)
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        eval_obj = joined_obj.evaluated_get(depsgraph)
+        mesh = bpy.data.meshes.new_from_object(eval_obj)
+        final_obj = bpy.data.objects.new(f"processed_{frame}", mesh)
+        bpy.context.collection.objects.link(final_obj)
+
+        # Clean up joined object
+        bpy.data.objects.remove(joined_obj)
+
+        # Trim back to original size + margin using bisect
+        print(f"  Trimming joined mesh to original bounds + {blend_config['blend_width_percent']}% margin")
+        bm_trim = bmesh.new()
+        bm_trim.from_mesh(final_obj.data)
+        bm_trim.transform(final_obj.matrix_world)
+
+        # Bisect at trim_min (remove everything below)
+        plane_co_min = Vector([0, 0, 0])
+        plane_co_min[blend_axis_idx] = trim_min
+        plane_no_min = Vector([0, 0, 0])
+        plane_no_min[blend_axis_idx] = -1.0
+
+        verts_before = len(bm_trim.verts)
+        bmesh.ops.bisect_plane(bm_trim, geom=bm_trim.verts[:] + bm_trim.edges[:] + bm_trim.faces[:],
+                               plane_co=plane_co_min, plane_no=plane_no_min, clear_outer=True)
+        print(f"    After min trim at {trim_min:.2f}: {len(bm_trim.verts)} verts (was {verts_before})")
+
+        # Bisect at trim_max (remove everything above)
+        plane_co_max = Vector([0, 0, 0])
+        plane_co_max[blend_axis_idx] = trim_max
+        plane_no_max = Vector([0, 0, 0])
+        plane_no_max[blend_axis_idx] = 1.0
+
+        verts_before = len(bm_trim.verts)
+        bmesh.ops.bisect_plane(bm_trim, geom=bm_trim.verts[:] + bm_trim.edges[:] + bm_trim.faces[:],
+                               plane_co=plane_co_max, plane_no=plane_no_max, clear_outer=True)
+        print(f"    After max trim at {trim_max:.2f}: {len(bm_trim.verts)} verts (was {verts_before})")
+
+        bm_trim.to_mesh(final_obj.data)
+        bm_trim.free()
+        final_obj.data.update()
+
+    else:
+        # Original approach: single frame processing
+        # Get or create a working copy of the fluid surface
+        work_obj = fluid_surface.copy()
+        work_obj.data = fluid_surface.data.copy()
+        bpy.context.collection.objects.link(work_obj)
+        bpy.context.view_layer.objects.active = work_obj
+
+        # FR-2: Add boolean modifier (difference with BoolBoundary) - optional
+        bool_boundary = bpy.data.objects.get(BOOL_BOUNDARY_NAME)
+        if bool_boundary:
+            bool_mod = work_obj.modifiers.new(name="Boolean", type='BOOLEAN')
+            bool_mod.operation = 'DIFFERENCE'
+            bool_mod.object = bool_boundary
+            bool_mod.show_viewport = True
+            bool_mod.show_render = True
+            print(f"  Added Boolean modifier with {BOOL_BOUNDARY_NAME}")
+
+        # FR-3: Add decimate modifier
+        decimate_mod = work_obj.modifiers.new(name="Decimate", type='DECIMATE')
+        decimate_mod.decimate_type = 'COLLAPSE'
+        decimate_mod.ratio = quality_ratio
+        print(f"  Added Decimate modifier with ratio {quality_ratio}")
+
+        # Apply modifiers
+        bpy.context.view_layer.objects.active = work_obj
+        work_obj.select_set(True)
+
+        # Apply modifiers by converting to mesh
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        eval_obj = work_obj.evaluated_get(depsgraph)
+        mesh = bpy.data.meshes.new_from_object(eval_obj)
+        final_obj = bpy.data.objects.new(f"processed_{frame}", mesh)
+        bpy.context.collection.objects.link(final_obj)
+
+        # Clean up work object
+        bpy.data.objects.remove(work_obj)
 
     # FR-4 & FR-5: Split into chunks and export using fixed world coordinates (FR-10)
     bounds = get_mesh_bounds(final_obj)
     if not bounds:
         print(f"  Warning: No geometry for frame {frame}")
         # Cleanup
-        bpy.data.objects.remove(work_obj)
         bpy.data.objects.remove(final_obj)
         return
 
@@ -591,7 +952,6 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
                 bpy.data.meshes.remove(chunk_mesh)
 
     # Cleanup
-    bpy.data.objects.remove(work_obj)
     bpy.data.objects.remove(final_obj)
 
     print(f"  Exported {chunks_x * chunks_y} chunks for frame {frame}")
@@ -702,14 +1062,37 @@ if reference_offset:
     print(f"Reference mesh '{reference_mesh_name}' found at position: {reference_offset}")
     print(f"Blend axis (largest offset): {axis_names[blend_axis_idx]} (offset: {reference_offset[blend_axis_idx]:.2f})")
 
+    # Calculate seam boundaries for clean edge cutting
+    # The seam boundaries define where we cut the mesh to create straight edges
+    # They must span exactly the reference offset distance so adjacent meshes meet perfectly
+    # IMPORTANT: These must be FIXED values, not dependent on any frame's mesh bounds
+    ref_axis_offset = abs(reference_offset[blend_axis_idx])
+
+    # Use fixed seam boundaries that work for all frames
+    # Based on typical mesh bounds of ~75 to ~510 on Y axis
+    # We set seam_min = 90 to be safely inside the minimum bound
+    # seam_max = seam_min + reference_offset to ensure perfect tiling
+    SEAM_MIN = 90.0  # Fixed value that works for all frames
+    seam_min = SEAM_MIN
+    seam_max = seam_min + ref_axis_offset
+
+    seam_boundaries = {
+        'min': seam_min,
+        'max': seam_max
+    }
+
+    print(f"Seam boundaries: min={seam_min:.2f}, max={seam_max:.2f} (span={seam_max - seam_min:.2f})")
+    print(f"Reference offset: {ref_axis_offset:.2f}")
+
     blend_config = {
         'enabled': True,
         'frame_offset': frame_offset,
         'reference_offset': reference_offset,
         'blend_axis_idx': blend_axis_idx,
-        'blend_width_percent': BLEND_WIDTH_PERCENT
+        'blend_width_percent': BLEND_WIDTH_PERCENT,
+        'seam_boundaries': seam_boundaries
     }
-    print(f"Seamless blending ENABLED")
+    print(f"Seamless edge cutting ENABLED")
 else:
     print(f"Warning: Reference mesh '{reference_mesh_name}' not found")
     print(f"Seamless blending DISABLED - edges will not be blended")

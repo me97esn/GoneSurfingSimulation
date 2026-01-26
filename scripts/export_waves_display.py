@@ -60,6 +60,44 @@ def smoothstep(t):
     return t * t * (3.0 - 2.0 * t)
 
 
+def get_height_at_position(world_verts, target_pos, blend_axis_idx, search_radius=10.0):
+    """
+    Get the approximate height (Z) at a given position by averaging nearby vertices.
+    Uses inverse distance weighting for smooth interpolation.
+
+    Args:
+        world_verts: List of world-space vertex positions
+        target_pos: Position to find height at (Vector)
+        blend_axis_idx: Axis index being blended (0=x, 1=y, 2=z)
+        search_radius: Radius to search for nearby vertices
+
+    Returns:
+        Average height (Z value) at the position, or None if no vertices found
+    """
+    heights = []
+    weights = []
+
+    # Non-blend axes for distance calculation
+    non_blend_axes = [i for i in range(3) if i != blend_axis_idx]
+
+    for world_pos in world_verts:
+        # Calculate 2D distance on non-blend axes
+        dist_sq = 0
+        for axis in non_blend_axes:
+            dist_sq += (world_pos[axis] - target_pos[axis])**2
+        dist = math.sqrt(dist_sq)
+
+        if dist < search_radius:
+            weight = 1.0 / (dist + 0.1)  # Inverse distance weighting
+            heights.append(world_pos.z)
+            weights.append(weight)
+
+    if heights:
+        total_weight = sum(weights)
+        return sum(h * w for h, w in zip(heights, weights)) / total_weight
+    return None
+
+
 def get_reference_mesh_offset(reference_mesh_name):
     """Get the position offset from the reference mesh"""
     ref_obj = bpy.data.objects.get(reference_mesh_name)
@@ -134,8 +172,9 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
     adjacent_obj = bpy.data.objects.new(f"adjacent_{adjacent_frame}", bpy.data.meshes.new_from_object(eval_adjacent))
     bpy.context.collection.objects.link(adjacent_obj)
 
-    # Position adjacent mesh at its tiling location
-    adjacent_obj.location[blend_axis_idx] = ref_axis_offset
+    # Position adjacent mesh at its tiling location using FULL reference offset
+    # The reference mesh shows exactly where the tiled copy should be placed
+    adjacent_obj.location = reference_offset.copy()
 
     # Apply the location transform to the mesh data
     bpy.context.view_layer.objects.active = adjacent_obj
@@ -186,8 +225,13 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
         print(f"    Gap center: {gap_center:.2f}")
 
         # Define blend zone width (use a percentage of the mesh extent or a fixed amount)
-        blend_zone_width = max(gap_width * 3, current_extent * 0.03)  # At least 3x gap width or 3% of mesh
+        blend_zone_width = max(gap_width * 3, current_extent * 0.05)  # At least 3x gap width or 5% of mesh
         print(f"    Blend zone width: {blend_zone_width:.2f}")
+
+        # Overlap factor: how far past the gap center vertices should move (as fraction of blend zone)
+        OVERLAP_FACTOR = 0.3  # Move 30% into the other mesh's territory
+        # Height blend strength: how much to blend Z values (0 = no height blend, 1 = full blend)
+        HEIGHT_BLEND_STRENGTH = 0.7
 
         # Build KD-trees for spatial matching (using non-blend axes)
         current_world_verts = [current_matrix @ v.co.copy() for v in current_obj.data.vertices]
@@ -208,7 +252,7 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
         blended_current = 0
         blended_adjacent = 0
 
-        # Blend current mesh vertices near the gap edge
+        # Blend current mesh vertices near the gap edge using OVERLAP approach
         for i, vert in enumerate(current_obj.data.vertices):
             world_pos = current_world_verts[i]
             axis_pos = world_pos[blend_axis_idx]
@@ -222,14 +266,18 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
                     blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
                     smooth_factor = smoothstep(blend_factor)
 
-                    # Find matching vertex on adjacent mesh
-                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
-                    co, idx, dist = adjacent_kd.find(match_pos)
-                    if idx is not None:
-                        target_pos = adjacent_world_verts[idx]
-                        # Move toward the target, scaled by blend factor
-                        # At edge: move to meet at gap center (lerp toward target)
-                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)  # 0.5 = meet halfway
+                    # Get target height from adjacent mesh using weighted interpolation
+                    target_height = get_height_at_position(adjacent_world_verts, world_pos, blend_axis_idx, search_radius=10.0)
+
+                    if target_height is not None:
+                        # OVERLAP approach: move PAST the gap center into adjacent mesh territory
+                        overlap_target = adjacent_gap_edge - blend_zone_width * OVERLAP_FACTOR
+                        new_axis_pos = axis_pos + (overlap_target - axis_pos) * smooth_factor
+                        new_z = world_pos.z + (target_height - world_pos.z) * smooth_factor * HEIGHT_BLEND_STRENGTH
+
+                        new_world_pos = world_pos.copy()
+                        new_world_pos[blend_axis_idx] = new_axis_pos
+                        new_world_pos.z = new_z
                         vert.co = current_matrix.inverted() @ new_world_pos
                         blended_current += 1
             else:
@@ -239,17 +287,23 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
                     blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
                     smooth_factor = smoothstep(blend_factor)
 
-                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
-                    co, idx, dist = adjacent_kd.find(match_pos)
-                    if idx is not None:
-                        target_pos = adjacent_world_verts[idx]
-                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                    target_height = get_height_at_position(adjacent_world_verts, world_pos, blend_axis_idx, search_radius=10.0)
+
+                    if target_height is not None:
+                        # OVERLAP approach: move PAST the gap center into adjacent mesh territory
+                        overlap_target = adjacent_gap_edge + blend_zone_width * OVERLAP_FACTOR
+                        new_axis_pos = axis_pos + (overlap_target - axis_pos) * smooth_factor
+                        new_z = world_pos.z + (target_height - world_pos.z) * smooth_factor * HEIGHT_BLEND_STRENGTH
+
+                        new_world_pos = world_pos.copy()
+                        new_world_pos[blend_axis_idx] = new_axis_pos
+                        new_world_pos.z = new_z
                         vert.co = current_matrix.inverted() @ new_world_pos
                         blended_current += 1
 
         current_obj.data.update()
 
-        # Blend adjacent mesh vertices near the gap edge
+        # Blend adjacent mesh vertices near the gap edge using OVERLAP approach
         for i, vert in enumerate(adjacent_obj.data.vertices):
             world_pos = adjacent_world_verts[i]
             axis_pos = world_pos[blend_axis_idx]
@@ -261,11 +315,17 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
                     blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
                     smooth_factor = smoothstep(blend_factor)
 
-                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
-                    co, idx, dist = current_kd.find(match_pos)
-                    if idx is not None:
-                        target_pos = current_world_verts[idx]
-                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                    target_height = get_height_at_position(current_world_verts, world_pos, blend_axis_idx, search_radius=10.0)
+
+                    if target_height is not None:
+                        # OVERLAP approach: move PAST the gap center into current mesh territory
+                        overlap_target = current_gap_edge + blend_zone_width * OVERLAP_FACTOR
+                        new_axis_pos = axis_pos + (overlap_target - axis_pos) * smooth_factor
+                        new_z = world_pos.z + (target_height - world_pos.z) * smooth_factor * HEIGHT_BLEND_STRENGTH
+
+                        new_world_pos = world_pos.copy()
+                        new_world_pos[blend_axis_idx] = new_axis_pos
+                        new_world_pos.z = new_z
                         vert.co = adjacent_matrix.inverted() @ new_world_pos
                         blended_adjacent += 1
             else:
@@ -275,11 +335,17 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
                     blend_factor = 1.0 - (dist_from_edge / blend_zone_width)
                     smooth_factor = smoothstep(blend_factor)
 
-                    match_pos = Vector((world_pos[non_blend_axes[0]], world_pos[non_blend_axes[1]], 0))
-                    co, idx, dist = current_kd.find(match_pos)
-                    if idx is not None:
-                        target_pos = current_world_verts[idx]
-                        new_world_pos = world_pos.lerp(target_pos, smooth_factor * 0.5)
+                    target_height = get_height_at_position(current_world_verts, world_pos, blend_axis_idx, search_radius=10.0)
+
+                    if target_height is not None:
+                        # OVERLAP approach: move PAST the gap center into current mesh territory
+                        overlap_target = current_gap_edge - blend_zone_width * OVERLAP_FACTOR
+                        new_axis_pos = axis_pos + (overlap_target - axis_pos) * smooth_factor
+                        new_z = world_pos.z + (target_height - world_pos.z) * smooth_factor * HEIGHT_BLEND_STRENGTH
+
+                        new_world_pos = world_pos.copy()
+                        new_world_pos[blend_axis_idx] = new_axis_pos
+                        new_world_pos.z = new_z
                         vert.co = adjacent_matrix.inverted() @ new_world_pos
                         blended_adjacent += 1
 
@@ -294,13 +360,28 @@ def create_joined_blended_mesh(fluid_surface, current_frame, frame_offset, refer
         bpy.context.view_layer.objects.active = current_obj
         bpy.ops.object.join()
 
-        # Merge close vertices at the seam
+        # Merge close vertices at the seam (with larger merge distance for overlap approach)
         print(f"    Merging close vertices at the gap seam...")
         bm_merged = bmesh.new()
         bm_merged.from_mesh(current_obj.data)
-        verts_before = len(bm_merged.verts)
 
-        bmesh.ops.remove_doubles(bm_merged, verts=bm_merged.verts, dist=0.1)
+        # Apply world transform to identify seam vertices
+        matrix_merged = current_obj.matrix_world
+        seam_verts = []
+        for v in bm_merged.verts:
+            world_pos = matrix_merged @ v.co
+            # Select vertices near the original gap region
+            if abs(world_pos[blend_axis_idx] - gap_center) < blend_zone_width:
+                seam_verts.append(v)
+
+        verts_before = len(bm_merged.verts)
+        print(f"    Found {len(seam_verts)} vertices near seam")
+
+        # Use larger merge distance (0.3) for overlap approach
+        bmesh.ops.remove_doubles(bm_merged, verts=seam_verts, dist=0.3)
+
+        # Recalculate normals for smooth shading at the seam
+        bmesh.ops.recalc_face_normals(bm_merged, faces=bm_merged.faces)
 
         print(f"    Merged vertices: {len(bm_merged.verts)} (was {verts_before}, removed {verts_before - len(bm_merged.verts)})")
 
@@ -1054,13 +1135,13 @@ print(f"{'='*60}")
 blend_config = None
 reference_offset = get_reference_mesh_offset(reference_mesh_name)
 if reference_offset:
-    # Determine blend axis from reference mesh (largest offset component)
-    abs_offsets = [abs(reference_offset.x), abs(reference_offset.y), abs(reference_offset.z)]
-    blend_axis_idx = abs_offsets.index(max(abs_offsets))
+    # Use X axis for blending (matching blend_gap_v2.py which works correctly)
+    # The meshes tile along X axis, so that's where the seam needs to be blended
+    blend_axis_idx = 0  # X axis
     axis_names = ['x', 'y', 'z']
 
     print(f"Reference mesh '{reference_mesh_name}' found at position: {reference_offset}")
-    print(f"Blend axis (largest offset): {axis_names[blend_axis_idx]} (offset: {reference_offset[blend_axis_idx]:.2f})")
+    print(f"Blend axis: {axis_names[blend_axis_idx]} (X axis, matching blend_gap_v2.py)")
 
     # Calculate seam boundaries for clean edge cutting
     # The seam boundaries define where we cut the mesh to create straight edges
@@ -1069,10 +1150,10 @@ if reference_offset:
     ref_axis_offset = abs(reference_offset[blend_axis_idx])
 
     # Use fixed seam boundaries that work for all frames
-    # Based on typical mesh bounds of ~75 to ~510 on Y axis
-    # We set seam_min = 90 to be safely inside the minimum bound
+    # For X-axis blending: mesh typically starts around X=0
+    # We set seam_min = 5 to be safely inside the minimum bound
     # seam_max = seam_min + reference_offset to ensure perfect tiling
-    SEAM_MIN = 90.0  # Fixed value that works for all frames
+    SEAM_MIN = 5.0  # Fixed value for X-axis (mesh starts around X=0)
     seam_min = SEAM_MIN
     seam_max = seam_min + ref_axis_offset
 

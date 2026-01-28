@@ -168,3 +168,68 @@ echo "============================================================"
 if [ $FAILED_JOBS -gt 0 ]; then
     exit 1
 fi
+
+# ============================================================
+# SEAMLESS BLENDING STEP
+# ============================================================
+echo ""
+echo "============================================================"
+echo "SEAMLESS BLENDING - Processing all quality levels"
+echo "============================================================"
+
+SEAMLESS_SCRIPT="$SCRIPT_DIR/post_export_seamless_blend.py"
+FRAME_OFFSET=95
+TILING_X=123.4486
+TILING_Y=-59.6493
+
+if [ ! -f "$SEAMLESS_SCRIPT" ]; then
+    echo "WARNING: Seamless blending script not found: $SEAMLESS_SCRIPT"
+    echo "Skipping seamless blending step."
+else
+    for ratio in $(echo $QUALITY_LEVELS | tr ',' ' '); do
+        ratio_name=$(echo $ratio | sed 's/\\./_/g')
+        INPUT_DIR="${OUTPUT_BASE_DIR}/chunks_ratio_${ratio_name}"
+        OUTPUT_DIR="${OUTPUT_BASE_DIR}/seamless_ratio_${ratio_name}"
+
+        if [ -d "$INPUT_DIR" ]; then
+            echo ""
+            echo "Processing: chunks_ratio_${ratio_name} -> seamless_ratio_${ratio_name}"
+            echo "  Input:  $INPUT_DIR"
+            echo "  Output: $OUTPUT_DIR"
+
+            SEAMLESS_START_TIME=$(date +%s)
+
+            blender --background --python "$SEAMLESS_SCRIPT" -- \
+                --input-dir "$INPUT_DIR" \
+                --output-dir "$OUTPUT_DIR" \
+                --start-frame $START_FRAME \
+                --end-frame $END_FRAME \
+                --frame-offset $FRAME_OFFSET \
+                --tiling-x $TILING_X \
+                --tiling-y $TILING_Y
+
+            SEAMLESS_END_TIME=$(date +%s)
+            SEAMLESS_SECONDS=$((SEAMLESS_END_TIME - SEAMLESS_START_TIME))
+            SEAMLESS_MINS=$((SEAMLESS_SECONDS / 60))
+            SEAMLESS_SECS=$((SEAMLESS_SECONDS % 60))
+
+            echo "  Completed in ${SEAMLESS_MINS}m ${SEAMLESS_SECS}s"
+        else
+            echo "WARNING: Input directory not found: $INPUT_DIR - skipping"
+        fi
+    done
+
+    echo ""
+    echo "============================================================"
+    echo "SEAMLESS BLENDING COMPLETE"
+    echo "============================================================"
+    echo "Generated seamless directories:"
+    for ratio in $(echo $QUALITY_LEVELS | tr ',' ' '); do
+        ratio_name=$(echo $ratio | sed 's/\\./_/g')
+        dir_path="${OUTPUT_BASE_DIR}/seamless_ratio_${ratio_name}"
+        if [ -d "$dir_path" ]; then
+            file_count=$(find "$dir_path" -name "*.obj" 2>/dev/null | wc -l)
+            echo "  - seamless_ratio_${ratio_name}: ${file_count} OBJ files"
+        fi
+    done
+fi

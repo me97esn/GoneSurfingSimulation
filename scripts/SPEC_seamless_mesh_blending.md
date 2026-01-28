@@ -159,6 +159,41 @@ Since meshes are split into 3x1 chunks:
   - Left edge chunks at x=0 (leftmost column) - blend toward adjacent frame's x=2 (rightmost) chunk
 - Middle chunks (x=1) are copied unchanged
 
+## Quick Reference: post_export_seamless_blend.py
+
+The current working blending script is `post_export_seamless_blend.py`. It runs in Blender background mode.
+
+**Full batch run (all frames):**
+```bash
+blender --background --python post_export_seamless_blend.py -- \
+    --input-dir /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_03 \
+    --output-dir /hdd/gone_surfing_exports/medium_wave_left/seamless \
+    --start-frame 886 \
+    --end-frame 1078 \
+    --frame-offset 95 \
+    --tiling-x 123.4486 \
+    --tiling-y -59.6493
+```
+
+**Single frame (for testing):**
+Add `--single-frame <frame>` to process only one frame. The adjacent mesh is loaded from `frame + frame-offset` (e.g. frame 886 + 95 = frame 981) and placed at the tiling position.
+```bash
+blender --background --python post_export_seamless_blend.py -- \
+    --input-dir /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_03 \
+    --output-dir /hdd/gone_surfing_exports/medium_wave_left/seamless \
+    --start-frame 886 \
+    --end-frame 1078 \
+    --frame-offset 95 \
+    --tiling-x 123.4486 \
+    --tiling-y -59.6493 \
+    --single-frame 886
+```
+
+**Key parameters:**
+- `--frame-offset 95`: The adjacent mesh is 95 frames ahead
+- `--tiling-x/y/z`: World position where the adjacent mesh is placed
+- `--start-frame` / `--end-frame`: Still required with `--single-frame` for frame wrapping logic
+
 ## Success Criteria
 
 - Adjacent meshes appear seamless when viewed in Unreal Engine

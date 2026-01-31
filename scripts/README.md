@@ -29,6 +29,7 @@ For large frame ranges, use the parallel version which splits work across multip
 ```
 
 **Parameters**:
+
 - `start_frame`: Starting frame number (default: 752)
 - `end_frame`: Ending frame number (default: 868)
 - `output_dir`: Base output directory (default: `/hdd/gone_surfing_exports/medium_wave_left`)
@@ -83,6 +84,7 @@ For smaller jobs or debugging, use the sequential version:
 ```
 
 This script will:
+
 1. Load the Blender file `breaking_waves_beach_break_2.blend` in background mode
 2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
 3. Apply decimate modifiers at multiple quality levels (ratios: 0.1 to 0.01 in steps of 0.01)
@@ -90,6 +92,7 @@ This script will:
 5. Export each chunk as an OBJ file with naming: `{x}_{y}_mesh_{frame}.obj`
 
 **Output directories** (created automatically, from highest to lowest quality):
+
 - `chunks_ratio_0_1` - Decimate ratio 0.1 (highest quality, 10% of polygons retained, largest file size)
 - `chunks_ratio_0_09` - Decimate ratio 0.09 (9% of polygons retained)
 - `chunks_ratio_0_08` - Decimate ratio 0.08 (8% of polygons retained)
@@ -102,6 +105,7 @@ This script will:
 - `chunks_ratio_0_01` - Decimate ratio 0.01 (lowest quality, 1% of polygons retained, smallest file size)
 
 **Import to Unreal Engine**:
+
 1. Choose a quality level directory based on your performance needs
 2. Import the OBJ meshes from that directory
 3. Use the MeshArrayActor button to load the meshes into the Niagara system
@@ -113,6 +117,7 @@ The script runs fully automated in Blender's background mode, so no manual inter
 If you're placing meshes side by side to create an infinite scrollable wave, you can apply seamless blending to eliminate visible seams between adjacent meshes.
 
 The exported meshes have distorted/curved edges due to decimation. The blending script:
+
 1. Cuts away the distorted edges (~3% of mesh width) from both left and right sides
 2. Blends the remaining edge vertices toward adjacent frame's exported OBJ mesh edges
 
@@ -138,6 +143,7 @@ python apply_seamless_blending.py \
 ```
 
 **Parameters**:
+
 - `--blend-file`: Path to the Blender simulation file (for reading reference mesh position ONLY)
 - `--reference-mesh`: Name of reference mesh in Blender (default: `1_0_mesh_903_reference`)
 - `--input`: Folder containing exported OBJ files
@@ -150,6 +156,7 @@ python apply_seamless_blending.py \
 - `--right-edge-chunk`: X index of right edge chunks (default: 2 for 3x1 grid)
 
 The script reads the reference mesh position to determine the exact offset, then loads adjacent frames' OBJ files for blending. For each frame N:
+
 - Right edge blends toward the LEFT edge of frame N+offset's OBJ (the mesh placed to the right)
 - Left edge blends toward the RIGHT edge of frame N-offset's OBJ (the mesh placed to the left)
 
@@ -165,11 +172,13 @@ The script reads the reference mesh position to determine the exact offset, then
 ### Export white water particles and convert to Niagara Datatable format
 
 White water particles must be exported manually from Blender's GUI (background mode doesn't load the FLIP Fluids whitewater mesh cache).
+
 #### Step 0: Remove the old obj files from the target folder (currently /hdd/gone_surfing_exports/medium_wave_left/white_water)
 
 #### Step 1: Export OBJ files from Blender
 
 1. Open Blender with the simulation file:
+
    ```bash
    blender ../3dmodels/breaking_waves_beach_break_2.blend
    ```
@@ -177,10 +186,12 @@ White water particles must be exported manually from Blender's GUI (background m
 2. Switch to the **Scripting** workspace (tab at the top of Blender)
 
 3. Open the export script:
+
    - Click **Open** button in the scripting panel
    - Navigate to and select `scripts/export_white_water_manual.py`
 
 4. **Configure the export** (edit the script if needed):
+
    - `START_FRAME` - Starting frame number (default: 752)
    - `END_FRAME` - Ending frame number (default: 1325)
    - `OUTPUT_DIR` - Output directory (default: `/hdd/gone_surfing_exports/medium_wave_left/white_water`)
@@ -223,13 +234,33 @@ This will create 3 JSON files in the output directory:
 
 ## Water height
 
-1. From a terminal, run `./open_simulation.sh`. This makes sure that the blender with FlipFluids addon installed is used
+Export fluid surface height samples and normals to JSON files:
 
-1. Open the file ./export_fluid_surface_to_3d_samples.py, change the start_frame, end_frame and step to match the simulation. Note that shorter step_size requires more frequencies to be used in the ifft, otherwise the result will be worse then with big step size.
-   1.Open a Text Editor view in Blender.
-   1.Press Alt + O, or go to Text>Open Text Block and open the .py file
-   1.Then simply press Run script :D
-1. After the export is finished: The samples are converted in the same step as the velocity data below
+```bash
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- [start_frame] [end_frame] [output_dir] [step]
+```
+
+**Example:**
+
+```bash
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- 752 1325 /hdd/gone_surfing_exports/medium_wave_left 2
+```
+
+**Parameters:**
+
+- `start_frame`: Starting frame number (default: 752)
+- `end_frame`: Ending frame number (default: 1325)
+- `output_dir`: Output directory for JSON files (default: `/hdd/gone_surfing_exports/medium_wave_left`)
+- `step`: Sample step size (default: 1). Note: shorter step_size requires more frequencies in the ifft
+
+**Output files:**
+
+- `wave_samples.json` - Height samples
+- `wave_normals_x.json` - Normal X components
+- `wave_normals_y.json` - Normal Y components
+- `wave_normals_z.json` - Normal Z components
+
+After the export is finished: The samples are converted in the same step as the velocity data below
 
 ## Water forces/velocities
 

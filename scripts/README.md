@@ -243,7 +243,7 @@ blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python exp
 **Example:**
 
 ```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- 752 1325 /hdd/gone_surfing_exports/medium_wave_left 2
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- 886 1078 /hdd/gone_surfing_exports/medium_wave_left 2
 ```
 
 **Parameters:**

@@ -262,6 +262,28 @@ blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python exp
 
 After the export is finished: The samples are converted in the same step as the velocity data below
 
+**Post-processing: Add valid data region metadata**
+
+The exported wave data contains zero-padded borders on all sides which cause incorrect wave height calculations when using infinite tiling in Unreal Engine. Run this script to add metadata fields that tell UE which data region to use:
+
+```bash
+python add_valid_data_region_to_metadata.py /path/to/height_samples_struct_metadata.json
+```
+
+**Example:**
+
+```bash
+python add_valid_data_region_to_metadata.py /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct_metadata.json
+```
+
+This adds the following fields to the metadata:
+- `valid_data_offset_x`: Skip first X index (left border with zeros)
+- `valid_data_offset_y`: Skip first 27 Y indices (top border with zeros)
+- `valid_data_width`: Number of valid X samples (excludes left and right borders)
+- `valid_data_height`: Number of valid Y samples (excludes top and bottom borders)
+
+**Why is this needed?** The Blender fluid simulation exports samples with zero-padded borders. When the wave tiling wraps coordinates, it can land in these zero regions, causing the buoyancy system to think objects are above water when they're actually submerged. This metadata tells the tiling system to only use the valid (non-zero) data region.
+
 ## Water forces/velocities
 
 For the water velocities, bjson files are read.

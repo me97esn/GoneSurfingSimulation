@@ -173,6 +173,28 @@ def calculate_distance_based_step_multiplier(y_pos, peak_y_positions, base_step)
         else:
             return max_step_multiplier  # 2.0 - low resolution
 
+# Calculate mesh bounds at start frame
+scn.frame_set(start_frame)
+depsgraph = bpy.context.evaluated_depsgraph_get()
+obj_eval = target_object.evaluated_get(depsgraph)
+mesh = obj_eval.to_mesh()
+matrix = target_object.matrix_world
+
+xs = [(matrix @ v.co).x for v in mesh.vertices]
+ys = [(matrix @ v.co).y for v in mesh.vertices]
+
+start_trace_x = min(xs)
+start_trace_y = min(ys)
+end_trace_x = max(xs)
+end_trace_y = max(ys)
+x_length = end_trace_x - start_trace_x
+y_length = end_trace_y - start_trace_y
+
+obj_eval.to_mesh_clear()
+
+print(f"Mesh bounds: X[{start_trace_x:.1f}, {end_trace_x:.1f}] Y[{start_trace_y:.1f}, {end_trace_y:.1f}]")
+print(f"Sampling area: {x_length:.1f} x {y_length:.1f}")
+
 for frame in range(start_frame, end_frame + 1):
     scn.frame_set(frame)
     # FR-32: Separate data structures for each ray direction
@@ -214,11 +236,6 @@ for frame in range(start_frame, end_frame + 1):
             "Scales": []
         }
     }
-
-    start_trace_x = -60
-    start_trace_y = -280
-    x_length = 160
-    y_length = 450
 
     # FR-35: First pass - sample at base resolution to find highest 1%
     coarse_samples = []
@@ -276,8 +293,8 @@ for frame in range(start_frame, end_frame + 1):
             for y in range(int(y_length / high_res_step) + 1):
                 for z_pos in range(-5, 105, 1):
                     ray_y = start_trace_y + high_res_step * y
-                    ray_begin = Vector((-60, ray_y, z_pos))
-                    ray_end = Vector((100, ray_y, z_pos))
+                    ray_begin = Vector((start_trace_x, ray_y, z_pos))
+                    ray_end = Vector((end_trace_x, ray_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
                     ray_direction_vec = ray_end - ray_begin
                     ray_direction_vec.normalize()
@@ -323,8 +340,8 @@ for frame in range(start_frame, end_frame + 1):
             for y in range(int(y_length / high_res_step) + 1):
                 for z_pos in range(-5, 105, 1):
                     ray_y = start_trace_y + high_res_step * y
-                    ray_begin = Vector((100, ray_y, z_pos))
-                    ray_end = Vector((-60, ray_y, z_pos))
+                    ray_begin = Vector((end_trace_x, ray_y, z_pos))
+                    ray_end = Vector((start_trace_x, ray_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
                     ray_direction_vec = ray_end - ray_begin
                     ray_direction_vec.normalize()
@@ -368,8 +385,8 @@ for frame in range(start_frame, end_frame + 1):
             for x in range(int(x_length / high_res_step) + 1):
                 for z_pos in range(-5, 105, 1):
                     ray_x = start_trace_x + high_res_step * x
-                    ray_begin = Vector((ray_x, -280, z_pos))
-                    ray_end = Vector((ray_x, 170, z_pos))
+                    ray_begin = Vector((ray_x, start_trace_y, z_pos))
+                    ray_end = Vector((ray_x, end_trace_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
                     ray_direction_vec = ray_end - ray_begin
                     ray_direction_vec.normalize()
@@ -413,8 +430,8 @@ for frame in range(start_frame, end_frame + 1):
             for x in range(int(x_length / high_res_step) + 1):
                 for z_pos in range(-5, 105, 1):
                     ray_x = start_trace_x + high_res_step * x
-                    ray_begin = Vector((ray_x, 170, z_pos))
-                    ray_end = Vector((ray_x, -280, z_pos))
+                    ray_begin = Vector((ray_x, end_trace_y, z_pos))
+                    ray_end = Vector((ray_x, start_trace_y, z_pos))
                     ray_begin_local = target_object.matrix_world.inverted() @ ray_begin
                     ray_direction_vec = ray_end - ray_begin
                     ray_direction_vec.normalize()

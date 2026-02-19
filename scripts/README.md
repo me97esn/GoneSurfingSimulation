@@ -260,7 +260,29 @@ blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python exp
 - `wave_normals_y.json` - Normal Y components
 - `wave_normals_z.json` - Normal Z components
 
-After the export is finished: The samples are converted in the same step as the velocity data below
+**Convert to Unreal Engine format:**
+
+After exporting, convert `wave_samples.json` to the Unreal Engine datatable format:
+
+```bash
+node convert_samples_json_to_ue4_datatable_format.js <source.json> <output.json> <output_metadata.json> [multiplier]
+```
+
+**Example:**
+
+```bash
+node convert_samples_json_to_ue4_datatable_format.js \
+  /hdd/gone_surfing_exports/medium_wave_left/wave_samples.json \
+  /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct.json \
+  /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct_metadata.json \
+  100
+```
+
+- `multiplier` (default: 100) scales height values for Unreal Engine units
+
+This produces:
+- `height_samples_struct.json` - Height data in UE4 datatable format
+- `height_samples_struct_metadata.json` - Grid metadata (step size, bounds, dimensions)
 
 **Post-processing: Add valid data region metadata**
 

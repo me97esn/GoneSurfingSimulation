@@ -19,8 +19,8 @@ argv = argv[argv.index("--") + 1:] if "--" in argv else []
 
 if len(argv) < 4:
     print("Error: Missing required arguments")
-    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing] [frame_offset] [reference_mesh]")
-    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip -95 1_0_mesh_903_reference")
+    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing] [frame_offset] [reference_mesh] [grid_step_size]")
+    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip -95 1_0_mesh_903_reference 2.0")
     sys.exit(1)
 
 start_frame = int(argv[0])
@@ -30,6 +30,7 @@ quality_levels = [float(x) for x in argv[3].split(',')]
 skip_existing = argv[4] if len(argv) > 4 else 'skip'
 frame_offset = int(argv[5]) if len(argv) > 5 else -95
 reference_mesh_name = argv[6] if len(argv) > 6 else '1_0_mesh_903_reference'
+grid_step_size = float(argv[7]) if len(argv) > 7 else 2.0
 
 # Seamless blending configuration
 BLEND_WIDTH_PERCENT = 3.0  # Width of blend zone as percentage of mesh extent
@@ -588,6 +589,143 @@ def create_edge_vertex_group(work_obj, blend_axis_idx, blend_width_percent):
     return vg_name
 
 
+def sample_unified_grid(mesh_obj, grid_config):
+    """
+    Sample height and normals on a regular grid via ray-casting.
+
+    Args:
+        mesh_obj: Blender mesh object (the joined blended mesh)
+        grid_config: dict with start_x, start_y, width, height, step_size
+
+    Returns:
+        dict with arrays: h, nx, ny, nz (each width*height floats)
+    """
+    start_x = grid_config['start_x']
+    start_y = grid_config['start_y']
+    width = grid_config['width']
+    height = grid_config['height']
+    step = grid_config['step_size']
+    total = width * height
+
+    h = [0.0] * total
+    nx = [0.0] * total
+    ny = [0.0] * total
+    nz = [1.0] * total
+
+    matrix_inv = mesh_obj.matrix_world.inverted()
+    ray_dir = Vector((0, 0, -1))
+
+    hit_count = 0
+    for y_idx in range(height):
+        for x_idx in range(width):
+            x_pos = start_x + step * x_idx
+            y_pos = start_y + step * y_idx
+
+            ray_origin = Vector((x_pos, y_pos, 100))
+            ray_origin_local = matrix_inv @ ray_origin
+
+            hit, location, normal, face_idx = mesh_obj.ray_cast(ray_origin_local, ray_dir)
+
+            i = y_idx * width + x_idx
+            if hit:
+                h[i] = float(location.z)
+                normal.normalize()
+                nx[i] = float(normal.x)
+                ny[i] = float(normal.y)
+                nz[i] = float(normal.z)
+                hit_count += 1
+
+    print(f"    Grid sampling: {hit_count}/{total} rays hit ({100*hit_count/total:.1f}%)")
+    return {'h': h, 'nx': nx, 'ny': ny, 'nz': nz}
+
+
+def write_unified_metadata(output_dir, grid_config, blend_config, start_frame, end_frame, reference_mesh_name):
+    """Write wave_unified_metadata.json with tiling and grid parameters."""
+    import json
+    from datetime import datetime
+
+    reference_offset = blend_config['reference_offset']
+    seam_boundaries = blend_config['seam_boundaries']
+
+    metadata = {
+        "version": "1.0",
+        "export_date": datetime.now().isoformat(),
+
+        "tiling": {
+            "tiling_x": abs(reference_offset.x),
+            "tiling_y": abs(reference_offset.y),
+            "comment": "Dimensions for infinite tiling, from reference mesh offset"
+        },
+
+        "grid": {
+            "step_size": grid_config['step_size'],
+            "grid_start_x": grid_config['start_x'],
+            "grid_start_y": grid_config['start_y'],
+            "grid_width": grid_config['width'],
+            "grid_height": grid_config['height'],
+            "comment": "Grid covers one tiling tile in X, full mesh extent in Y"
+        },
+
+        "seam_boundaries": {
+            "min": seam_boundaries['min'],
+            "max": seam_boundaries['max'],
+            "axis": "x",
+            "comment": "Seam boundaries used for mesh trimming"
+        },
+
+        "frames": {
+            "start_frame": start_frame,
+            "end_frame": end_frame,
+            "frame_offset": blend_config['frame_offset'],
+            "comment": "frame_offset is the offset to adjacent frame for blending"
+        },
+
+        "reference_mesh": {
+            "name": reference_mesh_name,
+            "offset_x": float(reference_offset.x),
+            "offset_y": float(reference_offset.y),
+            "offset_z": float(reference_offset.z)
+        }
+    }
+
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, "wave_unified_metadata.json")
+    with open(filepath, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"  Written unified metadata to {filepath}")
+
+
+def write_unified_frame_data(frame, grid_config, samples, output_dir):
+    """Write per-frame wave_data_frame_{frame}.json with height, normals, and velocity placeholders."""
+    import json
+
+    frame_data = {
+        "frame": frame,
+        "grid": {
+            "width": grid_config['width'],
+            "height": grid_config['height'],
+            "step": grid_config['step_size'],
+            "start_x": grid_config['start_x'],
+            "start_y": grid_config['start_y']
+        },
+        "data": {
+            "h": samples['h'],
+            "nx": samples['nx'],
+            "ny": samples['ny'],
+            "nz": samples['nz'],
+            "vx": [],
+            "vy": [],
+            "vz": []
+        }
+    }
+
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, f"wave_data_frame_{frame}.json")
+    with open(filepath, "w") as f:
+        json.dump(frame_data, f)
+    print(f"    Written unified frame data to {filepath}")
+
+
 def get_mesh_bounds(obj):
     """Get the bounding box of a mesh object in world space"""
     if len(obj.data.vertices) == 0:
@@ -673,7 +811,7 @@ def split_mesh_into_chunks(obj, chunks_x, chunks_y):
 
     return chunks
 
-def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True, blend_config=None):
+def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chunks_x, chunks_y, fixed_chunk_bounds, skip_existing_files=True, blend_config=None, unified_config=None):
     """Export all chunks for a single frame at specified quality using fixed world coordinates"""
     # Check if all chunks for this frame already exist
     # For 3x1 configuration: we export 2 files (0_0 contains chunks 0&2, 1_0 is middle chunk)
@@ -709,6 +847,17 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             blend_config['blend_axis_idx'],
             blend_config['blend_width_percent']
         )
+
+        # Sample unified grid from the full-resolution blended mesh (before decimation)
+        if unified_config:
+            unified_output_dir = unified_config['output_dir']
+            frame_filepath = os.path.join(unified_output_dir, f"wave_data_frame_{frame}.json")
+            if not os.path.exists(frame_filepath):
+                print(f"  Sampling unified grid from blended mesh...")
+                samples = sample_unified_grid(joined_obj, unified_config['grid_config'])
+                write_unified_frame_data(frame, unified_config['grid_config'], samples, unified_output_dir)
+            else:
+                print(f"  Unified frame data already exists, skipping")
 
         # Store original bounds before any processing (we'll trim back to this + margin)
         blend_axis_idx = blend_config['blend_axis_idx']
@@ -1178,6 +1327,56 @@ else:
     print(f"Warning: Reference mesh '{reference_mesh_name}' not found")
     print(f"Seamless blending DISABLED - edges will not be blended")
 
+# Set up unified grid sampling configuration
+unified_config = None
+if blend_config:
+    print(f"\n{'='*60}")
+    print(f"Setting up unified grid sampling")
+    print(f"{'='*60}")
+
+    # Evaluate mesh at start frame to get Y bounds
+    bpy.context.scene.frame_set(start_frame)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = fluid_surface.evaluated_get(depsgraph)
+    temp_mesh = obj_eval.to_mesh()
+    matrix = fluid_surface.matrix_world
+
+    ys = [(matrix @ v.co).y for v in temp_mesh.vertices]
+    mesh_min_y = min(ys)
+    mesh_max_y = max(ys)
+    mesh_y_extent = mesh_max_y - mesh_min_y
+    obj_eval.to_mesh_clear()
+
+    tiling_x = abs(blend_config['reference_offset'].x)
+    grid_start_x = blend_config['seam_boundaries']['min']
+    grid_start_y = mesh_min_y
+
+    grid_width = int(tiling_x / grid_step_size)
+    grid_height = int(mesh_y_extent / grid_step_size)
+
+    grid_config = {
+        'start_x': grid_start_x,
+        'start_y': grid_start_y,
+        'width': grid_width,
+        'height': grid_height,
+        'step_size': grid_step_size
+    }
+
+    unified_output_dir = os.path.join(output_base_dir, "unified")
+
+    unified_config = {
+        'grid_config': grid_config,
+        'output_dir': unified_output_dir
+    }
+
+    print(f"Grid: {grid_width} x {grid_height} samples, step={grid_step_size}")
+    print(f"Grid start: ({grid_start_x:.2f}, {grid_start_y:.2f})")
+    print(f"Grid covers: X=[{grid_start_x:.2f}, {grid_start_x + grid_width * grid_step_size:.2f}], Y=[{grid_start_y:.2f}, {grid_start_y + grid_height * grid_step_size:.2f}]")
+    print(f"Unified output: {unified_output_dir}")
+
+    # Write metadata once
+    write_unified_metadata(unified_output_dir, grid_config, blend_config, start_frame, end_frame, reference_mesh_name)
+
 # Convert skip_existing string to boolean
 skip_existing_files = (skip_existing.lower() == 'skip')
 
@@ -1203,7 +1402,7 @@ for quality_idx, quality_ratio in enumerate(quality_levels):
         frame_start_time = time.time()
 
         print(f"\nFrame {frame}:")
-        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files, blend_config)
+        export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, CHUNKS_X, CHUNKS_Y, fixed_chunk_bounds, skip_existing_files, blend_config, unified_config)
 
         # Calculate time for this frame
         frame_duration = time.time() - frame_start_time

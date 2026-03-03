@@ -306,6 +306,30 @@ This adds the following fields to the metadata:
 
 **Why is this needed?** The Blender fluid simulation exports samples with zero-padded borders. When the wave tiling wraps coordinates, it can land in these zero regions, causing the buoyancy system to think objects are above water when they're actually submerged. This metadata tells the tiling system to only use the valid (non-zero) data region.
 
+## Unified wave data (height + normals from blended mesh)
+
+The unified export samples height and normals directly from the seamlessly blended mesh used for the stop-motion OBJ export. This ensures the height data is perfectly aligned with the tiled meshes in Unreal Engine.
+
+The unified data is exported automatically as part of the mesh export (`export_waves_display.py`). When seamless blending is enabled, each frame's blended mesh is sampled on a regular grid before decimation.
+
+After the mesh export completes, merge the per-frame files into a single UE datatable:
+
+```bash
+python merge_unified_wave_data.py <input_dir> [output_file]
+```
+
+**Example:**
+
+```bash
+python merge_unified_wave_data.py /hdd/gone_surfing_exports/medium_wave_left/unified
+```
+
+This produces:
+- `wave_unified_data.json` - UE datatable with one row per frame, containing flat arrays for `h`, `nx`, `ny`, `nz`
+- `wave_unified_metadata.json` - Grid dimensions, tiling parameters, seam boundaries (written by the export script)
+
+See [UNIFIED_WAVE_UE_IMPORT.md](UNIFIED_WAVE_UE_IMPORT.md) for how to import and use this data in Unreal Engine.
+
 ## Water forces/velocities
 
 For the water velocities, bjson files are read.

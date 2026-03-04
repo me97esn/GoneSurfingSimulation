@@ -1339,9 +1339,10 @@ if blend_config:
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_eval = fluid_surface.evaluated_get(depsgraph)
     temp_mesh = obj_eval.to_mesh()
-    matrix = fluid_surface.matrix_world
 
-    ys = [(matrix @ v.co).y for v in temp_mesh.vertices]
+    # Use local-space bounds (no matrix_world) because the joined blended mesh
+    # has identity matrix — its vertices are in the fluid surface's local space
+    ys = [v.co.y for v in temp_mesh.vertices]
     mesh_min_y = min(ys)
     mesh_max_y = max(ys)
     mesh_y_extent = mesh_max_y - mesh_min_y

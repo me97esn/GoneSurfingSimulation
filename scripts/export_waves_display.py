@@ -642,51 +642,25 @@ def sample_unified_grid(mesh_obj, grid_config):
 def write_unified_metadata(output_dir, grid_config, blend_config, start_frame, end_frame, reference_mesh_name):
     """Write wave_unified_metadata.json with tiling and grid parameters."""
     import json
-    from datetime import datetime
 
     reference_offset = blend_config['reference_offset']
     seam_boundaries = blend_config['seam_boundaries']
 
-    metadata = {
-        "version": "1.0",
-        "export_date": datetime.now().isoformat(),
-
-        "tiling": {
-            "tiling_x": abs(reference_offset.x),
-            "tiling_y": abs(reference_offset.y),
-            "comment": "Dimensions for infinite tiling, from reference mesh offset"
-        },
-
-        "grid": {
-            "step_size": grid_config['step_size'],
-            "grid_start_x": grid_config['start_x'],
-            "grid_start_y": grid_config['start_y'],
-            "grid_width": grid_config['width'],
-            "grid_height": grid_config['height'],
-            "comment": "Grid covers one tiling tile in X, full mesh extent in Y"
-        },
-
-        "seam_boundaries": {
-            "min": seam_boundaries['min'],
-            "max": seam_boundaries['max'],
-            "axis": "x",
-            "comment": "Seam boundaries used for mesh trimming"
-        },
-
-        "frames": {
-            "start_frame": start_frame,
-            "end_frame": end_frame,
-            "frame_offset": blend_config['frame_offset'],
-            "comment": "frame_offset is the offset to adjacent frame for blending"
-        },
-
-        "reference_mesh": {
-            "name": reference_mesh_name,
-            "offset_x": float(reference_offset.x),
-            "offset_y": float(reference_offset.y),
-            "offset_z": float(reference_offset.z)
-        }
-    }
+    # UE datatable format: top-level array, flat fields, "Name" key per row
+    metadata = [{
+        "Name": "Metadata",
+        "tiling_x": abs(reference_offset.x),
+        "tiling_y": abs(reference_offset.y),
+        "step_size": grid_config['step_size'],
+        "grid_start_x": grid_config['start_x'],
+        "grid_start_y": grid_config['start_y'],
+        "grid_width": grid_config['width'],
+        "grid_height": grid_config['height'],
+        "seam_min": seam_boundaries['min'],
+        "seam_max": seam_boundaries['max'],
+        "start_frame": start_frame,
+        "end_frame": end_frame,
+    }]
 
     os.makedirs(output_dir, exist_ok=True)
     filepath = os.path.join(output_dir, "wave_unified_metadata.json")

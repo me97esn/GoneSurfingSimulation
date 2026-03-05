@@ -25,7 +25,7 @@ output_file = sys.argv[2] if len(sys.argv) > 2 else os.path.join(input_dir, "wav
 
 # Find all per-frame files
 pattern = os.path.join(input_dir, "wave_data_frame_*.json")
-frame_files = sorted(glob.glob(pattern))
+frame_files = sorted(glob.glob(pattern), key=lambda f: int(os.path.basename(f).split('_')[-1].split('.')[0]))
 
 if not frame_files:
     print(f"No frame files found matching {pattern}")

@@ -1326,8 +1326,10 @@ if blend_config:
     grid_start_x = blend_config['seam_boundaries']['min']
     grid_start_y = mesh_min_y
 
-    grid_width = int(tiling_x / grid_step_size)
-    grid_height = int(mesh_y_extent / grid_step_size)
+    # Calculate grid width to cover full seam extent (including blend zones)
+    seam_extent_x = blend_config['seam_boundaries']['max'] - blend_config['seam_boundaries']['min']
+    grid_width = int(seam_extent_x / grid_step_size) + 1  # +1 to include end point
+    grid_height = int(mesh_y_extent / grid_step_size) + 1  # +1 to include end point
 
     grid_config = {
         'start_x': grid_start_x,

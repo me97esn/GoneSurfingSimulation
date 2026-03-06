@@ -7,20 +7,24 @@ Also click the flip fluids sidebar and the button about enabling blur data https
 
 To start the simulation immediately, and make sure it restarts if it crashes, run the script `./run_simulation.sh`
 
-## Export the wave animation (Alternative: Alembic, for use in desktop games)
+## Export wave animation + wave height data
 
-. From blender, open the file breaking_waves_beach_break_2_water_display.blend. Add or edit modifier:Remesh with settings, voxelsize: 0.5, adaptivity: 0. 2. Set the start frame to 1 (Important! Even if the waves should start at a later frame, the animation has to be exported from the first frame, otherwise it will be corrupted) and the end frame to prefered end frame (currently 868). NOTE: Last time I wrote this, I wrote 0. But this doesn't work and I beleive this is incorrect. frame 0 gave an error when trying to import into UE4. But this could be because both the simulation and the animation starts at frame 1. Perhaps the important thing is to start on the first simulation&animation frame? 3. Select the water and export as alembic: Selected objects only, scale: 1.000,
-uncheck: Vertex colors, Face sets, Use subdivision Schema, Apply subsurf, Curves as Mesh, Triangulate,;Export hair, Export particles, Flatten hierarchy
-Check: Normals, Visible objects only, Renderable objects only, UVs, Pack UV Islands
+This export produces both the stop-motion OBJ meshes and wave height/normal grid data from the same seamlessly blended mesh. The blending, chunking, decimation, and height sampling all happen in one step.
 
-4. To export the simulation from blender to UE4, use alembic exporter. But for this exporter to export the animation, and not only the first frame, a modifier has to be added to the water surface (as of this writing. This bug should be fixed by now, but apparantly isn't).
-5. Go to frame 1, and set the simulation and animation to start on frame 1
-6. To choose resolution, choose the Water surface, and change the Flip fluids setting to display preview in the render and viewport.
-7. To import this animation into ue4: use geometry cache which imports the entire animation. I have often had problems with normals being on the inside. I have not been able to solve that satisfactory, but the way I handle it is by setting the water material in UE4 to be double sided.
+### One-time setup: Position reference mesh in Blender
 
-## Export the wave animation (Alternative stop motion meshes for use in mobile games)
+The reference mesh determines the exact position offset where adjacent meshes are placed for seamless tiling.
 
-### Parallel Export (Recommended - Much Faster!)
+1. Open the simulation Blender file
+2. Import a reference mesh (e.g., an OBJ from the frame that will be placed adjacent - typically frame N-95)
+   - Use import settings: Forward=X, Up=Z (to match export settings)
+3. Position it exactly where it would be placed adjacent to frame 0 in Unreal (edge-to-edge)
+4. Name the imported mesh `1_0_mesh_903_reference` (this is the default name the script looks for)
+5. Save the Blender file
+
+### Step 1: Run the export
+
+#### Parallel Export (Recommended - Much Faster!)
 
 For large frame ranges, use the parallel version which splits work across multiple CPU cores:
 
@@ -47,125 +51,75 @@ For large frame ranges, use the parallel version which splits work across multip
 
 # Use 4 parallel jobs (if you have fewer cores)
 ./export_waves_display_parallel.sh 752 868 /hdd/exports skip 4
-
-# Maximum speed with 8 cores
-./export_waves_display_parallel.sh 752 868 /hdd/exports skip 8
 ```
 
-**Performance**: With 8 cores, this can be up to ~8x faster than the sequential version (e.g., 200 hours → ~25 hours).
+**Performance**: With 8 cores, this can be up to ~8x faster than the sequential version.
 
-**Monitoring**: Progress logs are saved to `{output_dir}/parallel_logs/` for each job. You can tail these files to monitor progress.
+**Monitoring**: Progress logs are saved to `{output_dir}/parallel_logs/` for each job.
 
-### Sequential Export (Single-threaded)
+#### Sequential Export (Single-threaded)
 
-For smaller jobs or debugging, use the sequential version:
+For smaller jobs or debugging:
 
 ```bash
-./export_waves_display.sh [start_frame] [end_frame] [output_dir] [skip_existing]
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_dir> <decimate_ratio> <skip_existing> <frame_offset> <reference_mesh_name> <grid_step_size>
 ```
 
-**Examples**:
+**Example:**
 
 ```bash
-# Use defaults (frames 752-868, skip existing files)
-./export_waves_display.sh
-
-# Custom frame range, skip existing files (resume interrupted export)
-./export_waves_display.sh 752 868
-
-# Custom frame range and output directory, skip existing
-./export_waves_display.sh 752 868 /hdd/exports
-
-# Overwrite all files (re-export everything)
-./export_waves_display.sh 752 868 /hdd/exports overwrite
-
-# Resume from where export stopped (skip existing files)
-./export_waves_display.sh 752 868 /hdd/exports skip
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 //hdd/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0
 ```
 
-This script will:
+**Parameters:**
 
-1. Load the Blender file `breaking_waves_beach_break_2.blend` in background mode
-2. Apply a boolean modifier (difference with BoolBoundary) to flatten the bottom
-3. Apply decimate modifiers at multiple quality levels (ratios: 0.1 to 0.01 in steps of 0.01)
-4. Split each frame into 3 chunks (3x1 grid along the longest axis)
-5. Export each chunk as an OBJ file with naming: `{x}_{y}_mesh_{frame}.obj`
+- `start_frame`, `end_frame`: Frame range to export
+- `output_dir`: Base output directory
+- `decimate_ratio`: Mesh decimation ratio (e.g., 0.03 = 3% of polygons)
+- `skip_existing`: `skip` to resume, `overwrite` to redo all
+- `frame_offset`: Frame offset to adjacent mesh for blending (e.g., -95)
+- `reference_mesh_name`: Name of the reference mesh in the Blender file
+- `grid_step_size`: Grid sampling step size in Blender units (default: 2.0)
 
-**Output directories** (created automatically, from highest to lowest quality):
+**Output:**
 
-- `chunks_ratio_0_1` - Decimate ratio 0.1 (highest quality, 10% of polygons retained, largest file size)
-- `chunks_ratio_0_09` - Decimate ratio 0.09 (9% of polygons retained)
-- `chunks_ratio_0_08` - Decimate ratio 0.08 (8% of polygons retained)
-- `chunks_ratio_0_07` - Decimate ratio 0.07 (7% of polygons retained)
-- `chunks_ratio_0_06` - Decimate ratio 0.06 (6% of polygons retained)
-- `chunks_ratio_0_05` - Decimate ratio 0.05 (5% of polygons retained)
-- `chunks_ratio_0_04` - Decimate ratio 0.04 (4% of polygons retained)
-- `chunks_ratio_0_03` - Decimate ratio 0.03 (3% of polygons retained)
-- `chunks_ratio_0_02` - Decimate ratio 0.02 (2% of polygons retained)
-- `chunks_ratio_0_01` - Decimate ratio 0.01 (lowest quality, 1% of polygons retained, smallest file size)
+- `chunks_ratio_*/*.obj` - Decimated mesh chunks at various quality levels
+- `unified/wave_data_frame_*.json` - Per-frame height + normal grid data
+- `unified/wave_unified_metadata.json` - Grid config in UE datatable format
 
-**Import to Unreal Engine**:
+### Step 2: Merge wave data for Unreal import
 
-1. Choose a quality level directory based on your performance needs
-2. Import the OBJ meshes from that directory
+After the export completes, merge the per-frame JSON files into a single UE datatable:
+
+```bash
+python3 merge_unified_wave_data.py <input_dir> [output_file]
+```
+
+**Example:**
+
+```bash
+python3 merge_unified_wave_data.py /hdd/gone_surfing_exports/medium_wave_left/unified
+```
+
+This produces:
+- `wave_unified_data.json` - UE datatable with one row per frame, containing flat arrays for `h`, `nx`, `ny`, `nz`
+- `wave_unified_metadata.json` - Grid dimensions, tiling parameters, seam boundaries (written by step 1)
+
+### Step 3: Import into Unreal Engine
+
+1. Import `wave_unified_metadata.json` and `wave_unified_data.json` as datatables
+2. Import the OBJ meshes from a quality level directory
 3. Use the MeshArrayActor button to load the meshes into the Niagara system
 
-The script runs fully automated in Blender's background mode, so no manual interaction is required.
+See [UNIFIED_WAVE_UE_IMPORT.md](UNIFIED_WAVE_UE_IMPORT.md) for detailed struct definitions and Blueprint lookup code.
 
-### Apply Seamless Blending (Optional)
+### Optional: Verify exported data
 
-If you're placing meshes side by side to create an infinite scrollable wave, you can apply seamless blending to eliminate visible seams between adjacent meshes.
-
-The exported meshes have distorted/curved edges due to decimation. The blending script:
-
-1. Cuts away the distorted edges (~3% of mesh width) from both left and right sides
-2. Blends the remaining edge vertices toward adjacent frame's exported OBJ mesh edges
-
-This removes the curved edges and creates smooth transitions using matching decimated mesh data (OBJ-to-OBJ blending).
-
-#### Step 1: One-time setup - Position reference mesh in Blender (REQUIRED)
-
-The reference mesh is **required** to determine the exact position offset where adjacent meshes are placed.
-
-1. Open the simulation Blender file
-2. Import a reference mesh (e.g., an OBJ from the frame that will be placed adjacent - typically frame N-95)
-   - Use import settings: Forward=X, Up=Z (to match export settings)
-3. Position it exactly where it would be placed adjacent to frame 0 in Unreal (edge-to-edge)
-4. Name the imported mesh `1_0_mesh_903_reference` (this is the default name the script looks for)
-5. Save the Blender file
-
-#### Step 2: Run the blending script
+Plot a single frame's wave data to visually compare with the Blender mesh:
 
 ```bash
-python apply_seamless_blending.py \
-    --blend-file ../3dmodels/breaking_waves_beach_break_2.blend \
-    --input /hdd/gone_surfing_exports/medium_wave_left/chunks_ratio_0_05
+python3 plot_unified_wave_data.py /hdd/gone_surfing_exports/medium_wave_left/unified/wave_data_frame_886.json
 ```
-
-**Parameters**:
-
-- `--blend-file`: Path to the Blender simulation file (for reading reference mesh position ONLY)
-- `--reference-mesh`: Name of reference mesh in Blender (default: `1_0_mesh_903_reference`)
-- `--input`: Folder containing exported OBJ files
-- `--output`: Output folder for blended meshes (default: `/tmp/seamless_blended_meshes`)
-- `--frame-offset`: Frame offset to adjacent mesh (default: -95, negative = earlier frame)
-- `--cut-width`: Width of edge to cut away as percentage (default: 3.0)
-- `--blend-width`: Blend zone width as percentage (default: 3.0)
-- `--blend-axis`: Axis along which meshes are placed: x, y, or z (default: x)
-- `--left-edge-chunk`: X index of left edge chunks (default: 0)
-- `--right-edge-chunk`: X index of right edge chunks (default: 2 for 3x1 grid)
-
-The script reads the reference mesh position to determine the exact offset, then loads adjacent frames' OBJ files for blending. For each frame N:
-
-- Right edge blends toward the LEFT edge of frame N+offset's OBJ (the mesh placed to the right)
-- Left edge blends toward the RIGHT edge of frame N-offset's OBJ (the mesh placed to the left)
-
-## Import the alembic animation into UE4
-
-1. Import the animation as geometry cache. It should start from the startframe, _not_ from frame 1. I have hade problems with scale and rotation, it seems to vary how it behaves. Be prepared to play around with scale at import time if the imported animation looks too small (scaling after import also works, but the animation has to be roughly correct scale at import to be of good quality)
-2. To place the animation at the correct place: open WaterController, and in construction script enable the "display all blocks" node. Then make sure that the alembic animation and the blocks align.
-
-- Sometimes the scale is very small. I don't know why, but it seems that I can manually change the scale at import time.
 
 ## White water
 
@@ -199,7 +153,7 @@ White water particles must be exported manually from Blender's GUI (background m
    - Set `EXPORT_BUBBLE`, `EXPORT_SPRAY`, `EXPORT_DUST` to True if needed
 
 5. Run the script:
-   - Press **Alt+P** or click the ▶️ **Run Script** button
+   - Press **Alt+P** or click the **Run Script** button
    - The script will print progress every 50 frames
    - Wait for completion (this may take a while for large frame ranges)
 
@@ -231,104 +185,6 @@ This will create 3 JSON files in the output directory:
 **Why manual export?** Blender's background mode doesn't properly load the FLIP Fluids whitewater mesh cache, resulting in empty exports. Running the export script from within Blender's GUI ensures the cache is properly loaded.
 
 **Import to Unreal**: Import one of the JSON files as a datatable and configure your Niagara particle system to use it. The files are in WavePointsData format, compatible with Niagara systems. Compare the three rotation variants in Unreal to determine which axis produces the correct orientation.
-
-## Water height
-
-Export fluid surface height samples and normals to JSON files:
-
-```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- [start_frame] [end_frame] [output_dir] [step]
-```
-
-**Example:**
-
-```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_fluid_surface_to_3d_samples.py -- 886 1078 /hdd/gone_surfing_exports/medium_wave_left 2
-```
-
-**Parameters:**
-
-- `start_frame`: Starting frame number (default: 752)
-- `end_frame`: Ending frame number (default: 1325)
-- `output_dir`: Output directory for JSON files (default: `/hdd/gone_surfing_exports/medium_wave_left`)
-- `step`: Sample step size (default: 1). Note: shorter step_size requires more frequencies in the ifft
-
-**Output files:**
-
-- `wave_samples.json` - Height samples
-- `wave_normals_x.json` - Normal X components
-- `wave_normals_y.json` - Normal Y components
-- `wave_normals_z.json` - Normal Z components
-
-**Convert to Unreal Engine format:**
-
-After exporting, convert `wave_samples.json` to the Unreal Engine datatable format:
-
-```bash
-node convert_samples_json_to_ue4_datatable_format.js <source.json> <output.json> <output_metadata.json> [multiplier]
-```
-
-**Example:**
-
-```bash
-node convert_samples_json_to_ue4_datatable_format.js \
-  /hdd/gone_surfing_exports/medium_wave_left/wave_samples.json \
-  /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct.json \
-  /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct_metadata.json \
-  100
-```
-
-- `multiplier` (default: 100) scales height values for Unreal Engine units
-
-This produces:
-- `height_samples_struct.json` - Height data in UE4 datatable format
-- `height_samples_struct_metadata.json` - Grid metadata (step size, bounds, dimensions)
-
-**Post-processing: Add valid data region metadata**
-
-The exported wave data contains zero-padded borders on all sides which cause incorrect wave height calculations when using infinite tiling in Unreal Engine. Run this script to add metadata fields that tell UE which data region to use:
-
-```bash
-python add_valid_data_region_to_metadata.py /path/to/height_samples_struct_metadata.json
-```
-
-**Example:**
-
-```bash
-python add_valid_data_region_to_metadata.py /hdd/gone_surfing_exports/medium_wave_left/height_samples_struct_metadata.json
-```
-
-This adds the following fields to the metadata:
-- `valid_data_offset_x`: Skip first X index (left border with zeros)
-- `valid_data_offset_y`: Skip first 27 Y indices (top border with zeros)
-- `valid_data_width`: Number of valid X samples (excludes left and right borders)
-- `valid_data_height`: Number of valid Y samples (excludes top and bottom borders)
-
-**Why is this needed?** The Blender fluid simulation exports samples with zero-padded borders. When the wave tiling wraps coordinates, it can land in these zero regions, causing the buoyancy system to think objects are above water when they're actually submerged. This metadata tells the tiling system to only use the valid (non-zero) data region.
-
-## Unified wave data (height + normals from blended mesh)
-
-The unified export samples height and normals directly from the seamlessly blended mesh used for the stop-motion OBJ export. This ensures the height data is perfectly aligned with the tiled meshes in Unreal Engine.
-
-The unified data is exported automatically as part of the mesh export (`export_waves_display.py`). When seamless blending is enabled, each frame's blended mesh is sampled on a regular grid before decimation.
-
-After the mesh export completes, merge the per-frame files into a single UE datatable:
-
-```bash
-python merge_unified_wave_data.py <input_dir> [output_file]
-```
-
-**Example:**
-
-```bash
-python merge_unified_wave_data.py /hdd/gone_surfing_exports/medium_wave_left/unified
-```
-
-This produces:
-- `wave_unified_data.json` - UE datatable with one row per frame, containing flat arrays for `h`, `nx`, `ny`, `nz`
-- `wave_unified_metadata.json` - Grid dimensions, tiling parameters, seam boundaries (written by the export script)
-
-See [UNIFIED_WAVE_UE_IMPORT.md](UNIFIED_WAVE_UE_IMPORT.md) for how to import and use this data in Unreal Engine.
 
 ## Water forces/velocities
 

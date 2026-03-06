@@ -1324,16 +1324,15 @@ if blend_config:
     ys = [v.co.y for v in sample_joined_obj.data.vertices]
     mesh_min_y = min(ys)
     mesh_max_y = max(ys)
-    mesh_y_extent = mesh_max_y - mesh_min_y
+    mesh_y_extent_orig = mesh_max_y - mesh_min_y
 
-    # Add 50% margin to Y bounds to account for frame-to-frame variation
-    # (different frames might have slightly different Y extents due to wave motion)
-    y_margin = mesh_y_extent * 0.5
-    mesh_min_y -= y_margin
+    # Add 50% margin ONLY to the max side (where the mesh extends beyond)
+    # Don't add to min side to avoid wasted sampling space
+    y_margin = mesh_y_extent_orig * 0.5
     mesh_max_y += y_margin
     mesh_y_extent = mesh_max_y - mesh_min_y
 
-    print(f"Y bounds with 50% margin: [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
+    print(f"Y bounds with 50% margin on max side: [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
 
     # Clean up sample mesh
     bpy.data.objects.remove(sample_joined_obj)

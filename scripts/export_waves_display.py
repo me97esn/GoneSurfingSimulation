@@ -1326,14 +1326,14 @@ if blend_config:
     mesh_max_y = max(ys)
     mesh_y_extent = mesh_max_y - mesh_min_y
 
-    # Add 10% margin to Y bounds to account for frame-to-frame variation
+    # Add 50% margin to Y bounds to account for frame-to-frame variation
     # (different frames might have slightly different Y extents due to wave motion)
-    y_margin = mesh_y_extent * 0.1
+    y_margin = mesh_y_extent * 0.5
     mesh_min_y -= y_margin
     mesh_max_y += y_margin
     mesh_y_extent = mesh_max_y - mesh_min_y
 
-    print(f"Y bounds with 10% margin: [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
+    print(f"Y bounds with 50% margin: [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
 
     # Clean up sample mesh
     bpy.data.objects.remove(sample_joined_obj)

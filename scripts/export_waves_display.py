@@ -1321,29 +1321,33 @@ if blend_config:
     )
 
     # Use local-space bounds from the joined blended mesh
+    xs = [v.co.x for v in sample_joined_obj.data.vertices]
     ys = [v.co.y for v in sample_joined_obj.data.vertices]
+    mesh_min_x = min(xs)
+    mesh_max_x = max(xs)
     mesh_min_y = min(ys)
     mesh_max_y = max(ys)
-    mesh_y_extent_orig = mesh_max_y - mesh_min_y
-
-    # Add 50% margin ONLY to the max side (where the mesh extends beyond)
-    # Don't add to min side to avoid wasted sampling space
-    y_margin = mesh_y_extent_orig * 0.5
-    mesh_max_y += y_margin
+    mesh_x_extent_orig = mesh_max_x - mesh_min_x
     mesh_y_extent = mesh_max_y - mesh_min_y
 
-    print(f"Y bounds with 50% margin on max side: [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
+    # Add 50% margin ONLY to the max X side (where the mesh extends beyond seam bounds)
+    # Don't add to min side to avoid wasted sampling space
+    x_margin = mesh_x_extent_orig * 0.5
+    mesh_max_x += x_margin
+    mesh_x_extent = mesh_max_x - mesh_min_x
+
+    print(f"X bounds with 50% margin on max side: [{mesh_min_x:.2f}, {mesh_max_x:.2f}] (extent: {mesh_x_extent:.2f})")
+    print(f"Y bounds (no margin): [{mesh_min_y:.2f}, {mesh_max_y:.2f}] (extent: {mesh_y_extent:.2f})")
 
     # Clean up sample mesh
     bpy.data.objects.remove(sample_joined_obj)
 
     tiling_x = abs(blend_config['reference_offset'].x)
-    grid_start_x = blend_config['seam_boundaries']['min']
+    grid_start_x = mesh_min_x  # Use measured min instead of seam_min
     grid_start_y = mesh_min_y
 
-    # Calculate grid width to cover full seam extent (including blend zones)
-    seam_extent_x = blend_config['seam_boundaries']['max'] - blend_config['seam_boundaries']['min']
-    grid_width = int(seam_extent_x / grid_step_size) + 1  # +1 to include end point
+    # Calculate grid dimensions based on measured extents with margin
+    grid_width = int(mesh_x_extent / grid_step_size) + 1  # +1 to include end point
     grid_height = int(mesh_y_extent / grid_step_size) + 1  # +1 to include end point
 
     grid_config = {

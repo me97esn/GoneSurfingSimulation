@@ -1308,19 +1308,26 @@ if blend_config:
     print(f"Setting up unified grid sampling")
     print(f"{'='*60}")
 
-    # Evaluate mesh at start frame to get Y bounds
+    # Create a sample joined blended mesh to get accurate Y bounds
+    # (the blended mesh is larger than the original fluid_surface)
     bpy.context.scene.frame_set(start_frame)
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    obj_eval = fluid_surface.evaluated_get(depsgraph)
-    temp_mesh = obj_eval.to_mesh()
+    sample_joined_obj = create_joined_blended_mesh(
+        fluid_surface,
+        start_frame,
+        blend_config['frame_offset'],
+        blend_config['reference_offset'],
+        blend_config['blend_axis_idx'],
+        blend_config['blend_width_percent']
+    )
 
-    # Use local-space bounds (no matrix_world) because the joined blended mesh
-    # has identity matrix — its vertices are in the fluid surface's local space
-    ys = [v.co.y for v in temp_mesh.vertices]
+    # Use local-space bounds from the joined blended mesh
+    ys = [v.co.y for v in sample_joined_obj.data.vertices]
     mesh_min_y = min(ys)
     mesh_max_y = max(ys)
     mesh_y_extent = mesh_max_y - mesh_min_y
-    obj_eval.to_mesh_clear()
+
+    # Clean up sample mesh
+    bpy.data.objects.remove(sample_joined_obj)
 
     tiling_x = abs(blend_config['reference_offset'].x)
     grid_start_x = blend_config['seam_boundaries']['min']

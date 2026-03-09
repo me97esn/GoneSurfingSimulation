@@ -62,13 +62,13 @@ For large frame ranges, use the parallel version which splits work across multip
 For smaller jobs or debugging:
 
 ```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_dir> <decimate_ratio> <skip_existing> <frame_offset> <reference_mesh_name> <grid_step_size>
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_dir> <decimate_ratio> <skip_existing> <frame_offset> <reference_mesh_name> <grid_step_size> <flip_cache_folder> <cache_subfolder>
 ```
 
 **Example:**
 
 ```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 //hdd/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 //hdd/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0 /ssd3/flip_fluid_cache/ flip_fluid_cache_6
 ```
 
 **Parameters:**
@@ -80,11 +80,13 @@ blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python exp
 - `frame_offset`: Frame offset to adjacent mesh for blending (e.g., -95)
 - `reference_mesh_name`: Name of the reference mesh in the Blender file
 - `grid_step_size`: Grid sampling step size in Blender units (default: 2.0)
+- `flip_cache_folder`: Path to FLIP Fluids cache (default: `/ssd3/flip_fluid_cache/`)
+- `cache_subfolder`: Cache subfolder name (default: `flip_fluid_cache_6`)
 
 **Output:**
 
 - `chunks_ratio_*/*.obj` - Decimated mesh chunks at various quality levels
-- `unified/wave_data_frame_*.json` - Per-frame height + normal grid data
+- `unified/wave_data_frame_*.json` - Per-frame height, normal, and velocity grid data
 - `unified/wave_unified_metadata.json` - Grid config in UE datatable format
 
 ### Step 2: Merge wave data for Unreal import
@@ -102,7 +104,7 @@ python3 merge_unified_wave_data.py /hdd/gone_surfing_exports/medium_wave_left/un
 ```
 
 This produces:
-- `wave_unified_data.json` - UE datatable with one row per frame, containing flat arrays for `h`, `nx`, `ny`, `nz`
+- `wave_unified_data.json` - UE datatable with one row per frame, containing flat arrays for `h`, `nx`, `ny`, `nz`, `vx`, `vy`, `vz`
 - `wave_unified_metadata.json` - Grid dimensions, tiling parameters, seam boundaries (written by step 1)
 
 ### Step 3: Import into Unreal Engine

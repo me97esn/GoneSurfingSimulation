@@ -2,7 +2,7 @@
 Merge per-frame unified wave data files into UE datatable JSON files.
 
 Produces two files:
-  - wave_unified_data.json: UE datatable with one row per frame (Name, h, nx, ny, nz)
+  - wave_unified_data.json: UE datatable with one row per frame (Name, h, nx, ny, nz, vx, vy, vz)
   - wave_unified_metadata.json is already written by the export script
 
 Usage:
@@ -40,13 +40,17 @@ for i, filepath in enumerate(frame_files):
     with open(filepath) as f:
         frame_data = json.load(f)
 
-    datatable.append({
+    row = {
         "Name": f"Frame_{frame_data['frame']}",
         "h": frame_data["data"]["h"],
         "nx": frame_data["data"]["nx"],
         "ny": frame_data["data"]["ny"],
         "nz": frame_data["data"]["nz"],
-    })
+        "vx": frame_data["data"].get("vx", []),
+        "vy": frame_data["data"].get("vy", []),
+        "vz": frame_data["data"].get("vz", []),
+    }
+    datatable.append(row)
 
     if (i + 1) % 50 == 0:
         print(f"  Processed {i + 1}/{len(frame_files)} files")

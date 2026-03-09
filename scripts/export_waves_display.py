@@ -19,8 +19,8 @@ argv = argv[argv.index("--") + 1:] if "--" in argv else []
 
 if len(argv) < 4:
     print("Error: Missing required arguments")
-    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing] [frame_offset] [reference_mesh] [grid_step_size]")
-    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip -95 1_0_mesh_903_reference 2.0")
+    print("Usage: blender file.blend --background --python export_waves_display.py -- <start_frame> <end_frame> <output_base_dir> <quality_levels_csv> [skip_existing] [frame_offset] [reference_mesh] [grid_step_size] [flip_cache_folder] [cache_subfolder]")
+    print("Example: blender file.blend --background --python export_waves_display.py -- 752 868 /hdd/exports 0.05,0.04,0.03,0.02,0.01 skip -95 1_0_mesh_903_reference 2.0 /ssd3/flip_fluid_cache/ flip_fluid_cache_6")
     sys.exit(1)
 
 start_frame = int(argv[0])
@@ -31,6 +31,8 @@ skip_existing = argv[4] if len(argv) > 4 else 'skip'
 frame_offset = int(argv[5]) if len(argv) > 5 else -95
 reference_mesh_name = argv[6] if len(argv) > 6 else '1_0_mesh_903_reference'
 grid_step_size = float(argv[7]) if len(argv) > 7 else 2.0
+flip_cache_folder = argv[8] if len(argv) > 8 else '/ssd3/flip_fluid_cache/'
+cache_subfolder = argv[9] if len(argv) > 9 else 'flip_fluid_cache_6'
 
 # Seamless blending configuration
 BLEND_WIDTH_PERCENT = 3.0  # Width of blend zone as percentage of mesh extent
@@ -589,6 +591,87 @@ def create_edge_vertex_group(work_obj, blend_axis_idx, blend_width_percent):
     return vg_name
 
 
+def read_bobj(filepath):
+    """
+    Read a FLIP Fluids .bobj binary file.
+
+    Format: uint32 num_vertices, then num_vertices * 3 floats (x, y, z).
+    Returns list of (x, y, z) tuples.
+    """
+    import struct
+
+    with open(filepath, 'rb') as f:
+        num_vertices = struct.unpack('<I', f.read(4))[0]
+        data = struct.unpack(f'<{num_vertices * 3}f', f.read(num_vertices * 12))
+
+    return [(data[i*3], data[i*3+1], data[i*3+2]) for i in range(num_vertices)]
+
+
+def sample_velocity_grid(frame, grid_config, bakefiles_folder):
+    """
+    Read velocity from FLIP Fluids cache and interpolate onto the regular grid.
+
+    Args:
+        frame: Frame number
+        grid_config: dict with start_x, start_y, width, height, step_size
+        bakefiles_folder: Path to bakefiles folder containing .bobj files
+
+    Returns:
+        dict with arrays: vx, vy, vz (each width*height floats), or None if files not found
+    """
+    from scipy.spatial import KDTree
+
+    bobj_path = os.path.join(bakefiles_folder, f"{frame}.bobj")
+    blur_path = os.path.join(bakefiles_folder, f"blur{frame}.bobj")
+
+    if not os.path.exists(bobj_path):
+        print(f"    Warning: {bobj_path} not found, skipping velocity")
+        return None
+    if not os.path.exists(blur_path):
+        print(f"    Warning: {blur_path} not found, skipping velocity")
+        return None
+
+    print(f"    Reading velocity data from {bobj_path}")
+    positions = read_bobj(bobj_path)
+    velocities = read_bobj(blur_path)
+
+    if len(positions) != len(velocities):
+        print(f"    Warning: position count ({len(positions)}) != velocity count ({len(velocities)}), skipping velocity")
+        return None
+
+    print(f"    {len(positions)} vertices in bobj, building KDTree...")
+
+    # Build KDTree from (x, y) positions for nearest-neighbor lookup
+    positions_2d = [(p[0], p[1]) for p in positions]
+    tree = KDTree(positions_2d)
+
+    start_x = grid_config['start_x']
+    start_y = grid_config['start_y']
+    width = grid_config['width']
+    height = grid_config['height']
+    step = grid_config['step_size']
+    total = width * height
+
+    vx = [0.0] * total
+    vy = [0.0] * total
+    vz = [0.0] * total
+
+    for y_idx in range(height):
+        for x_idx in range(width):
+            x_pos = start_x + step * x_idx
+            y_pos = start_y + step * y_idx
+            dist, idx = tree.query([x_pos, y_pos])
+            i = y_idx * width + x_idx
+            vx[i] = float(velocities[idx][0])
+            vy[i] = float(velocities[idx][1])
+            vz[i] = float(velocities[idx][2])
+
+    nonzero = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
+    print(f"    Velocity grid sampling complete: {nonzero}/{total*3} non-zero components")
+
+    return {'vx': vx, 'vy': vy, 'vz': vz}
+
+
 def sample_unified_grid(mesh_obj, grid_config):
     """
     Sample height and normals on a regular grid via ray-casting.
@@ -670,7 +753,7 @@ def write_unified_metadata(output_dir, grid_config, blend_config, start_frame, e
 
 
 def write_unified_frame_data(frame, grid_config, samples, output_dir):
-    """Write per-frame wave_data_frame_{frame}.json with height, normals, and velocity placeholders."""
+    """Write per-frame wave_data_frame_{frame}.json with height, normals, and velocity."""
     import json
 
     frame_data = {
@@ -687,9 +770,9 @@ def write_unified_frame_data(frame, grid_config, samples, output_dir):
             "nx": samples['nx'],
             "ny": samples['ny'],
             "nz": samples['nz'],
-            "vx": [],
-            "vy": [],
-            "vz": []
+            "vx": samples.get('vx', []),
+            "vy": samples.get('vy', []),
+            "vz": samples.get('vz', [])
         }
     }
 
@@ -829,6 +912,14 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
             if not os.path.exists(frame_filepath):
                 print(f"  Sampling unified grid from blended mesh...")
                 samples = sample_unified_grid(joined_obj, unified_config['grid_config'])
+
+                # Sample velocity from FLIP Fluids cache
+                bakefiles_folder = unified_config.get('bakefiles_folder')
+                if bakefiles_folder:
+                    velocity_samples = sample_velocity_grid(frame, unified_config['grid_config'], bakefiles_folder)
+                    if velocity_samples:
+                        samples.update(velocity_samples)
+
                 write_unified_frame_data(frame, unified_config['grid_config'], samples, unified_output_dir)
             else:
                 print(f"  Unified frame data already exists, skipping")
@@ -1348,9 +1439,19 @@ if blend_config:
 
     unified_output_dir = os.path.join(output_base_dir, "unified")
 
+    # Set up velocity sampling from FLIP Fluids cache
+    bakefiles_folder = os.path.join(flip_cache_folder, cache_subfolder, "bakefiles")
+    if os.path.isdir(bakefiles_folder):
+        print(f"Velocity source: {bakefiles_folder}")
+    else:
+        print(f"Warning: bakefiles folder not found at {bakefiles_folder}")
+        print(f"Velocity data will NOT be included in unified export")
+        bakefiles_folder = None
+
     unified_config = {
         'grid_config': grid_config,
-        'output_dir': unified_output_dir
+        'output_dir': unified_output_dir,
+        'bakefiles_folder': bakefiles_folder
     }
 
     print(f"Grid: {grid_width} x {grid_height} samples, step={grid_step_size}")

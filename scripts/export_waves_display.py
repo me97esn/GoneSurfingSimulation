@@ -619,10 +619,8 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     Returns:
         dict with arrays: vx, vy, vz (each width*height floats), or None if files not found
     """
-    from scipy.spatial import KDTree
-
-    bobj_path = os.path.join(bakefiles_folder, f"{frame}.bobj")
-    blur_path = os.path.join(bakefiles_folder, f"blur{frame}.bobj")
+    bobj_path = os.path.join(bakefiles_folder, f"{frame:06d}.bobj")
+    blur_path = os.path.join(bakefiles_folder, f"blur{frame:06d}.bobj")
 
     if not os.path.exists(bobj_path):
         print(f"    Warning: {bobj_path} not found, skipping velocity")
@@ -642,8 +640,11 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     print(f"    {len(positions)} vertices in bobj, building KDTree...")
 
     # Build KDTree from (x, y) positions for nearest-neighbor lookup
-    positions_2d = [(p[0], p[1]) for p in positions]
-    tree = KDTree(positions_2d)
+    # Uses mathutils.kdtree (available in Blender, no scipy needed)
+    tree = KDTree(len(positions))
+    for i, p in enumerate(positions):
+        tree.insert((p[0], p[1], 0.0), i)
+    tree.balance()
 
     start_x = grid_config['start_x']
     start_y = grid_config['start_y']
@@ -660,7 +661,7 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
         for x_idx in range(width):
             x_pos = start_x + step * x_idx
             y_pos = start_y + step * y_idx
-            dist, idx = tree.query([x_pos, y_pos])
+            _co, idx, _dist = tree.find((x_pos, y_pos, 0.0))
             i = y_idx * width + x_idx
             vx[i] = float(velocities[idx][0])
             vy[i] = float(velocities[idx][1])

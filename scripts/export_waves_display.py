@@ -646,21 +646,20 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
         tree.insert((p[0], p[1], 0.0), i)
     tree.balance()
 
-    # Debug: show range of positions in KDTree
-    if positions_2d:
-        x_coords = [p[0] for p in positions_2d]
-        y_coords = [p[1] for p in positions_2d]
-        print(f"    KDTree X range: [{min(x_coords):.2f}, {max(x_coords):.2f}]")
-        print(f"    KDTree Y range: [{min(y_coords):.2f}, {max(y_coords):.2f}]")
-        print(f"    Sampling grid X range: [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
-        print(f"    Sampling grid Y range: [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
-
     start_x = grid_config['start_x']
     start_y = grid_config['start_y']
     width = grid_config['width']
     height = grid_config['height']
     step = grid_config['step_size']
     total = width * height
+
+    # Debug: show range of positions in KDTree vs sampling grid
+    x_coords = [p[0] for p in positions]
+    y_coords = [p[1] for p in positions]
+    print(f"    KDTree X range: [{min(x_coords):.2f}, {max(x_coords):.2f}]")
+    print(f"    KDTree Y range: [{min(y_coords):.2f}, {max(y_coords):.2f}]")
+    print(f"    Sampling grid X range: [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
+    print(f"    Sampling grid Y range: [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
 
     vx = [0.0] * total
     vy = [0.0] * total
@@ -669,15 +668,19 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     # Debug: track unique indices found by KDTree
     debug_samples = []
 
+    max_dist = step * 2.0  # Grid points farther than this from any particle get zero velocity
+
     for y_idx in range(height):
         for x_idx in range(width):
             x_pos = start_x + step * x_idx
             y_pos = start_y + step * y_idx
             _co, idx, _dist = tree.find((x_pos, y_pos, 0.0))
             i = y_idx * width + x_idx
-            vx[i] = float(velocities[idx][0])
-            vy[i] = float(velocities[idx][1])
-            vz[i] = float(velocities[idx][2])
+            if _dist <= max_dist:
+                vx[i] = float(velocities[idx][0])
+                vy[i] = float(velocities[idx][1])
+                vz[i] = float(velocities[idx][2])
+            # else: leave as 0.0 (grid point is outside the fluid domain)
 
             # Debug: sample a few positions with same X but different Y
             if x_idx == 0 and y_idx % 4 == 0 and len(debug_samples) < 5:
@@ -685,8 +688,8 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
                     'grid': (x_idx, y_idx),
                     'pos': (x_pos, y_pos),
                     'kdtree_idx': idx,
-                    'dist': dist,
-                    'vel': velocities[idx]
+                    'dist': _dist,
+                    'vel': velocities[idx] if _dist <= max_dist else (0.0, 0.0, 0.0)
                 })
 
     # Print debug samples

@@ -68,7 +68,12 @@ blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python exp
 **Example:**
 
 ```bash
-blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 //hdd/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0 /ssd3/flip_fluid_cache/ flip_fluid_cache_6
+blender ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 //hdd/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0 /hdd/flip_fluid_cache/ flip_fluid_cache_8
+```
+or using git bash on windows:
+```
+cd /e/windowsgrejor/git/GoneSurfingSimulation/scripts;
+"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe" ../3dmodels/breaking_waves_beach_break_2.blend --background --python export_waves_display.py -- 886 1078 D:/gone_surfing_exports/medium_wave_left/unified 0.03 skip -95 1_0_mesh_903_reference 2.0 D:/flip_fluid_cache/ flip_fluid_cache_8
 ```
 
 **Parameters:**

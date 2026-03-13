@@ -646,6 +646,15 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
         tree.insert((p[0], p[1], 0.0), i)
     tree.balance()
 
+    # Debug: show range of positions in KDTree
+    if positions_2d:
+        x_coords = [p[0] for p in positions_2d]
+        y_coords = [p[1] for p in positions_2d]
+        print(f"    KDTree X range: [{min(x_coords):.2f}, {max(x_coords):.2f}]")
+        print(f"    KDTree Y range: [{min(y_coords):.2f}, {max(y_coords):.2f}]")
+        print(f"    Sampling grid X range: [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
+        print(f"    Sampling grid Y range: [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
+
     start_x = grid_config['start_x']
     start_y = grid_config['start_y']
     width = grid_config['width']
@@ -657,6 +666,9 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     vy = [0.0] * total
     vz = [0.0] * total
 
+    # Debug: track unique indices found by KDTree
+    debug_samples = []
+
     for y_idx in range(height):
         for x_idx in range(width):
             x_pos = start_x + step * x_idx
@@ -666,6 +678,22 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
             vx[i] = float(velocities[idx][0])
             vy[i] = float(velocities[idx][1])
             vz[i] = float(velocities[idx][2])
+
+            # Debug: sample a few positions with same X but different Y
+            if x_idx == 0 and y_idx % 4 == 0 and len(debug_samples) < 5:
+                debug_samples.append({
+                    'grid': (x_idx, y_idx),
+                    'pos': (x_pos, y_pos),
+                    'kdtree_idx': idx,
+                    'dist': dist,
+                    'vel': velocities[idx]
+                })
+
+    # Print debug samples
+    if debug_samples:
+        print(f"    Debug: Velocity sampling at X=0 for different Y values:")
+        for s in debug_samples:
+            print(f"      Grid({s['grid'][0]},{s['grid'][1]}) pos=({s['pos'][0]:.2f},{s['pos'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
 
     nonzero = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
     print(f"    Velocity grid sampling complete: {nonzero}/{total*3} non-zero components")

@@ -607,7 +607,7 @@ def read_bobj(filepath):
     return [(data[i*3], data[i*3+1], data[i*3+2]) for i in range(num_vertices)]
 
 
-def sample_velocity_grid(frame, grid_config, bakefiles_folder):
+def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj, flip_domain_obj):
     """
     Read velocity from FLIP Fluids cache and interpolate onto the regular grid.
 
@@ -615,6 +615,8 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
         frame: Frame number
         grid_config: dict with start_x, start_y, width, height, step_size
         bakefiles_folder: Path to bakefiles folder containing .bobj files
+        fluid_surface_obj: The fluid surface mesh object (for coordinate alignment)
+        flip_domain_obj: The FLIP domain object (for coordinate transformation)
 
     Returns:
         dict with arrays: vx, vy, vz (each width*height floats), or None if files not found
@@ -653,13 +655,34 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     step = grid_config['step_size']
     total = width * height
 
+    # Calculate coordinate offset from fluid_surface to FLIP domain
+    # The velocity data (.bobj) is in FLIP domain's local coordinate space
+    # The grid sampling is in fluid_surface's coordinate space
+    # We need to transform grid positions to FLIP domain space before sampling
+    fluid_surface_loc = fluid_surface_obj.location
+    flip_domain_loc = flip_domain_obj.location if flip_domain_obj else Vector((0, 0, 0))
+
+    # Offset to convert from fluid_surface space to FLIP domain space
+    coord_offset = Vector((
+        flip_domain_loc.x - fluid_surface_loc.x,
+        flip_domain_loc.y - fluid_surface_loc.y,
+        flip_domain_loc.z - fluid_surface_loc.z
+    ))
+
+    print(f"    Coordinate system alignment:")
+    print(f"      fluid_surface location: ({fluid_surface_loc.x:.2f}, {fluid_surface_loc.y:.2f}, {fluid_surface_loc.z:.2f})")
+    print(f"      FLIP domain location: ({flip_domain_loc.x:.2f}, {flip_domain_loc.y:.2f}, {flip_domain_loc.z:.2f})")
+    print(f"      Offset (domain - surface): ({coord_offset.x:.2f}, {coord_offset.y:.2f}, {coord_offset.z:.2f})")
+
     # Debug: show range of positions in KDTree vs sampling grid
     x_coords = [p[0] for p in positions]
     y_coords = [p[1] for p in positions]
-    print(f"    KDTree X range: [{min(x_coords):.2f}, {max(x_coords):.2f}]")
-    print(f"    KDTree Y range: [{min(y_coords):.2f}, {max(y_coords):.2f}]")
-    print(f"    Sampling grid X range: [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
-    print(f"    Sampling grid Y range: [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
+    print(f"    KDTree X range (FLIP domain space): [{min(x_coords):.2f}, {max(x_coords):.2f}]")
+    print(f"    KDTree Y range (FLIP domain space): [{min(y_coords):.2f}, {max(y_coords):.2f}]")
+    print(f"    Sampling grid X range (fluid_surface space): [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
+    print(f"    Sampling grid Y range (fluid_surface space): [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
+    print(f"    Sampling grid X range (FLIP domain space): [{start_x + coord_offset.x:.2f}, {start_x + step * (width-1) + coord_offset.x:.2f}]")
+    print(f"    Sampling grid Y range (FLIP domain space): [{start_y + coord_offset.y:.2f}, {start_y + step * (height-1) + coord_offset.y:.2f}]")
 
     vx = [0.0] * total
     vy = [0.0] * total
@@ -672,9 +695,15 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
 
     for y_idx in range(height):
         for x_idx in range(width):
+            # Grid position in fluid_surface space
             x_pos = start_x + step * x_idx
             y_pos = start_y + step * y_idx
-            _co, idx, _dist = tree.find((x_pos, y_pos, 0.0))
+
+            # Transform to FLIP domain space for velocity lookup
+            x_pos_flip = x_pos + coord_offset.x
+            y_pos_flip = y_pos + coord_offset.y
+
+            _co, idx, _dist = tree.find((x_pos_flip, y_pos_flip, 0.0))
             i = y_idx * width + x_idx
             if _dist <= max_dist:
                 vx[i] = float(velocities[idx][0])
@@ -686,7 +715,8 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
             if x_idx == 0 and y_idx % 4 == 0 and len(debug_samples) < 5:
                 debug_samples.append({
                     'grid': (x_idx, y_idx),
-                    'pos': (x_pos, y_pos),
+                    'pos_surface': (x_pos, y_pos),
+                    'pos_flip': (x_pos_flip, y_pos_flip),
                     'kdtree_idx': idx,
                     'dist': _dist,
                     'vel': velocities[idx] if _dist <= max_dist else (0.0, 0.0, 0.0)
@@ -696,7 +726,7 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder):
     if debug_samples:
         print(f"    Debug: Velocity sampling at X=0 for different Y values:")
         for s in debug_samples:
-            print(f"      Grid({s['grid'][0]},{s['grid'][1]}) pos=({s['pos'][0]:.2f},{s['pos'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
+            print(f"      Grid({s['grid'][0]},{s['grid'][1]}) surface_pos=({s['pos_surface'][0]:.2f},{s['pos_surface'][1]:.2f}) flip_pos=({s['pos_flip'][0]:.2f},{s['pos_flip'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
 
     nonzero = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
     print(f"    Velocity grid sampling complete: {nonzero}/{total*3} non-zero components")
@@ -947,8 +977,9 @@ def export_chunks_for_frame(fluid_surface, frame, quality_ratio, output_dir, chu
 
                 # Sample velocity from FLIP Fluids cache
                 bakefiles_folder = unified_config.get('bakefiles_folder')
+                flip_domain_obj = unified_config.get('flip_domain_obj')
                 if bakefiles_folder:
-                    velocity_samples = sample_velocity_grid(frame, unified_config['grid_config'], bakefiles_folder)
+                    velocity_samples = sample_velocity_grid(frame, unified_config['grid_config'], bakefiles_folder, fluid_surface, flip_domain_obj)
                     if velocity_samples:
                         samples.update(velocity_samples)
 
@@ -1480,10 +1511,22 @@ if blend_config:
         print(f"Velocity data will NOT be included in unified export")
         bakefiles_folder = None
 
+    # Get FLIP domain object for coordinate transformation
+    flip_domain_obj = bpy.data.objects.get("Flip Domain.001")
+    if not flip_domain_obj:
+        # Try alternative name
+        flip_domain_obj = bpy.data.objects.get("Flip_Domain")
+
+    if flip_domain_obj:
+        print(f"FLIP domain found: {flip_domain_obj.name} at location ({flip_domain_obj.location.x:.2f}, {flip_domain_obj.location.y:.2f}, {flip_domain_obj.location.z:.2f})")
+    else:
+        print(f"Warning: FLIP domain object not found, velocity coordinate transformation may be incorrect")
+
     unified_config = {
         'grid_config': grid_config,
         'output_dir': unified_output_dir,
-        'bakefiles_folder': bakefiles_folder
+        'bakefiles_folder': bakefiles_folder,
+        'flip_domain_obj': flip_domain_obj
     }
 
     print(f"Grid: {grid_width} x {grid_height} samples, step={grid_step_size}")

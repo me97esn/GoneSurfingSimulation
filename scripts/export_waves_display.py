@@ -641,11 +641,30 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
 
     print(f"    {len(positions)} vertices in bobj, building KDTree...")
 
+    # Transform FLIP particle positions from FLIP domain local space to fluid_surface local space
+    # The .bobj particle positions are in the FLIP domain's local coordinate system
+    # Grid is defined in fluid_surface local space, so we need particles in the same space
+    flip_domain_loc = flip_domain_obj.location if flip_domain_obj else Vector((0, 0, 0))
+    fluid_surface_loc = fluid_surface_obj.location
+
+    # Transform: FLIP domain local → world → fluid_surface local
+    # particle_world = particle_flip_local + flip_domain.location
+    # particle_fluid_local = particle_world - fluid_surface.location
+    # Combined: particle_flip_local + (flip_domain.location - fluid_surface.location)
+    offset = Vector((
+        flip_domain_loc.x - fluid_surface_loc.x,
+        flip_domain_loc.y - fluid_surface_loc.y,
+        flip_domain_loc.z - fluid_surface_loc.z
+    ))
+
     # Build KDTree from (x, y) positions for nearest-neighbor lookup
     # Uses mathutils.kdtree (available in Blender, no scipy needed)
     tree = KDTree(len(positions))
     for i, p in enumerate(positions):
-        tree.insert((p[0], p[1], 0.0), i)
+        # Transform from FLIP domain local space to fluid_surface local space
+        fluid_local_x = p[0] + offset.x
+        fluid_local_y = p[1] + offset.y
+        tree.insert((fluid_local_x, fluid_local_y, 0.0), i)
     tree.balance()
 
     start_x = grid_config['start_x']
@@ -655,34 +674,22 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
     step = grid_config['step_size']
     total = width * height
 
-    # Calculate coordinate offset from fluid_surface to FLIP domain
-    # The velocity data (.bobj) is in FLIP domain's local coordinate space
-    # The grid sampling is in fluid_surface's coordinate space
-    # We need to transform grid positions to FLIP domain space before sampling
-    fluid_surface_loc = fluid_surface_obj.location
-    flip_domain_loc = flip_domain_obj.location if flip_domain_obj else Vector((0, 0, 0))
-
-    # Offset to convert from fluid_surface space to FLIP domain space
-    coord_offset = Vector((
-        flip_domain_loc.x - fluid_surface_loc.x,
-        flip_domain_loc.y - fluid_surface_loc.y,
-        flip_domain_loc.z - fluid_surface_loc.z
-    ))
-
     print(f"    Coordinate system alignment:")
-    print(f"      fluid_surface location: ({fluid_surface_loc.x:.2f}, {fluid_surface_loc.y:.2f}, {fluid_surface_loc.z:.2f})")
     print(f"      FLIP domain location: ({flip_domain_loc.x:.2f}, {flip_domain_loc.y:.2f}, {flip_domain_loc.z:.2f})")
-    print(f"      Offset (domain - surface): ({coord_offset.x:.2f}, {coord_offset.y:.2f}, {coord_offset.z:.2f})")
+    print(f"      fluid_surface location: ({fluid_surface_loc.x:.2f}, {fluid_surface_loc.y:.2f}, {fluid_surface_loc.z:.2f})")
+    print(f"      Transform offset: ({offset.x:.2f}, {offset.y:.2f}, {offset.z:.2f})")
 
     # Debug: show range of positions in KDTree vs sampling grid
-    x_coords = [p[0] for p in positions]
-    y_coords = [p[1] for p in positions]
-    print(f"    KDTree X range (FLIP domain space): [{min(x_coords):.2f}, {max(x_coords):.2f}]")
-    print(f"    KDTree Y range (FLIP domain space): [{min(y_coords):.2f}, {max(y_coords):.2f}]")
-    print(f"    Sampling grid X range (fluid_surface space): [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
-    print(f"    Sampling grid Y range (fluid_surface space): [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
-    print(f"    Sampling grid X range (FLIP domain space): [{start_x + coord_offset.x:.2f}, {start_x + step * (width-1) + coord_offset.x:.2f}]")
-    print(f"    Sampling grid Y range (FLIP domain space): [{start_y + coord_offset.y:.2f}, {start_y + step * (height-1) + coord_offset.y:.2f}]")
+    x_flip_local = [p[0] for p in positions]
+    y_flip_local = [p[1] for p in positions]
+    x_fluid_local = [p[0] + offset.x for p in positions]
+    y_fluid_local = [p[1] + offset.y for p in positions]
+    print(f"    Particles X range (FLIP domain local): [{min(x_flip_local):.2f}, {max(x_flip_local):.2f}]")
+    print(f"    Particles Y range (FLIP domain local): [{min(y_flip_local):.2f}, {max(y_flip_local):.2f}]")
+    print(f"    Particles X range (fluid_surface local): [{min(x_fluid_local):.2f}, {max(x_fluid_local):.2f}]")
+    print(f"    Particles Y range (fluid_surface local): [{min(y_fluid_local):.2f}, {max(y_fluid_local):.2f}]")
+    print(f"    Grid X range (fluid_surface local): [{start_x:.2f}, {start_x + step * (width-1):.2f}]")
+    print(f"    Grid Y range (fluid_surface local): [{start_y:.2f}, {start_y + step * (height-1):.2f}]")
 
     vx = [0.0] * total
     vy = [0.0] * total
@@ -695,15 +702,13 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
 
     for y_idx in range(height):
         for x_idx in range(width):
-            # Grid position in fluid_surface space
+            # Grid position in fluid_surface local space
             x_pos = start_x + step * x_idx
             y_pos = start_y + step * y_idx
 
-            # Transform to FLIP domain space for velocity lookup
-            x_pos_flip = x_pos + coord_offset.x
-            y_pos_flip = y_pos + coord_offset.y
-
-            _co, idx, _dist = tree.find((x_pos_flip, y_pos_flip, 0.0))
+            # Sample velocity at this grid position
+            # Both grid and particles are now in fluid_surface local space
+            _co, idx, _dist = tree.find((x_pos, y_pos, 0.0))
             i = y_idx * width + x_idx
             if _dist <= max_dist:
                 vx[i] = float(velocities[idx][0])
@@ -715,8 +720,7 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
             if x_idx == 0 and y_idx % 4 == 0 and len(debug_samples) < 5:
                 debug_samples.append({
                     'grid': (x_idx, y_idx),
-                    'pos_surface': (x_pos, y_pos),
-                    'pos_flip': (x_pos_flip, y_pos_flip),
+                    'pos': (x_pos, y_pos),
                     'kdtree_idx': idx,
                     'dist': _dist,
                     'vel': velocities[idx] if _dist <= max_dist else (0.0, 0.0, 0.0)
@@ -726,7 +730,7 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
     if debug_samples:
         print(f"    Debug: Velocity sampling at X=0 for different Y values:")
         for s in debug_samples:
-            print(f"      Grid({s['grid'][0]},{s['grid'][1]}) surface_pos=({s['pos_surface'][0]:.2f},{s['pos_surface'][1]:.2f}) flip_pos=({s['pos_flip'][0]:.2f},{s['pos_flip'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
+            print(f"      Grid({s['grid'][0]},{s['grid'][1]}) pos=({s['pos'][0]:.2f},{s['pos'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
 
     nonzero = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
     print(f"    Velocity grid sampling complete: {nonzero}/{total*3} non-zero components")

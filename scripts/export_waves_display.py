@@ -749,9 +749,10 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
             for x_idx in range(width):
                 i = y_idx * width + x_idx
 
-                # Check if this cell is near-zero (dead zone)
-                magnitude_sq = vx[i]**2 + vy[i]**2 + vz[i]**2
-                if magnitude_sq < 1.0:  # Less than ~1 cm/s magnitude
+                # Check if this cell is exactly zero (dead zone)
+                # Note: Cells with zero velocity were not filled by KDTree sampling
+                is_zero = (vx[i] == 0.0 and vy[i] == 0.0 and vz[i] == 0.0)
+                if is_zero:
                     # Average from 8 surrounding neighbors
                     neighbor_vx, neighbor_vy, neighbor_vz = [], [], []
                     neighbor_weights = []
@@ -767,10 +768,10 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
                             # Check bounds
                             if 0 <= nx < width and 0 <= ny < height:
                                 ni = ny * width + nx
-                                neighbor_mag_sq = vx[ni]**2 + vy[ni]**2 + vz[ni]**2
 
                                 # Only use non-zero neighbors
-                                if neighbor_mag_sq > 1.0:
+                                neighbor_is_nonzero = not (vx[ni] == 0.0 and vy[ni] == 0.0 and vz[ni] == 0.0)
+                                if neighbor_is_nonzero:
                                     # Inverse distance weighting (diagonal = sqrt(2), adjacent = 1)
                                     dist = (dx**2 + dy**2)**0.5
                                     weight = 1.0 / (dist + 0.1)

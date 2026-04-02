@@ -698,7 +698,9 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
     # Debug: track unique indices found by KDTree
     debug_samples = []
 
-    max_dist = step * 2.0  # Grid points farther than this from any particle get zero velocity
+    # INCREASED from 2.0 to 10.0 to reduce dead zones
+    # Allows sampling from particles up to 10 grid cells away
+    max_dist = step * 10.0  # Grid points farther than this from any particle get zero velocity
 
     for y_idx in range(height):
         for x_idx in range(width):
@@ -732,8 +734,70 @@ def sample_velocity_grid(frame, grid_config, bakefiles_folder, fluid_surface_obj
         for s in debug_samples:
             print(f"      Grid({s['grid'][0]},{s['grid'][1]}) pos=({s['pos'][0]:.2f},{s['pos'][1]:.2f}) -> KDTree idx={s['kdtree_idx']} dist={s['dist']:.4f} vel=({s['vel'][0]:.6f},{s['vel'][1]:.6f},{s['vel'][2]:.6f})")
 
-    nonzero = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
-    print(f"    Velocity grid sampling complete: {nonzero}/{total*3} non-zero components")
+    nonzero_before_fill = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
+    print(f"    Velocity grid sampling complete: {nonzero_before_fill}/{total*3} non-zero components before gap-filling")
+
+    # GAP-FILLING: Multi-pass averaging to fill remaining zero-velocity cells
+    # This smoothly propagates velocity data from non-zero neighbors into dead zones
+    print(f"    Starting gap-filling for remaining zero-velocity cells...")
+
+    filled_count = 0
+    for pass_num in range(5):  # Multiple passes to propagate values outward
+        changes_this_pass = 0
+
+        for y_idx in range(height):
+            for x_idx in range(width):
+                i = y_idx * width + x_idx
+
+                # Check if this cell is near-zero (dead zone)
+                magnitude_sq = vx[i]**2 + vy[i]**2 + vz[i]**2
+                if magnitude_sq < 1.0:  # Less than ~1 cm/s magnitude
+                    # Average from 8 surrounding neighbors
+                    neighbor_vx, neighbor_vy, neighbor_vz = [], [], []
+                    neighbor_weights = []
+
+                    for dy in [-1, 0, 1]:
+                        for dx in [-1, 0, 1]:
+                            if dx == 0 and dy == 0:
+                                continue  # Skip self
+
+                            nx = x_idx + dx
+                            ny = y_idx + dy
+
+                            # Check bounds
+                            if 0 <= nx < width and 0 <= ny < height:
+                                ni = ny * width + nx
+                                neighbor_mag_sq = vx[ni]**2 + vy[ni]**2 + vz[ni]**2
+
+                                # Only use non-zero neighbors
+                                if neighbor_mag_sq > 1.0:
+                                    # Inverse distance weighting (diagonal = sqrt(2), adjacent = 1)
+                                    dist = (dx**2 + dy**2)**0.5
+                                    weight = 1.0 / (dist + 0.1)
+
+                                    neighbor_vx.append(vx[ni])
+                                    neighbor_vy.append(vy[ni])
+                                    neighbor_vz.append(vz[ni])
+                                    neighbor_weights.append(weight)
+
+                    # If we found non-zero neighbors, fill this cell
+                    if neighbor_vx:
+                        total_weight = sum(neighbor_weights)
+                        vx[i] = sum(v * w for v, w in zip(neighbor_vx, neighbor_weights)) / total_weight
+                        vy[i] = sum(v * w for v, w in zip(neighbor_vy, neighbor_weights)) / total_weight
+                        vz[i] = sum(v * w for v, w in zip(neighbor_vz, neighbor_weights)) / total_weight
+                        changes_this_pass += 1
+                        filled_count += 1
+
+        print(f"      Pass {pass_num + 1}: Filled {changes_this_pass} cells")
+
+        # Stop early if no changes
+        if changes_this_pass == 0:
+            print(f"      Converged after {pass_num + 1} passes")
+            break
+
+    nonzero_after_fill = sum(1 for v in vx if v != 0.0) + sum(1 for v in vy if v != 0.0) + sum(1 for v in vz if v != 0.0)
+    print(f"    Gap-filling complete: {filled_count} cells filled, {nonzero_after_fill}/{total*3} total non-zero components")
 
     return {'vx': vx, 'vy': vy, 'vz': vz}
 

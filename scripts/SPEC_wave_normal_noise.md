@@ -1,5 +1,55 @@
 # Specification: Fix Noisy Wave Normals in the Unified Export
 
+## Status (updated 2026-09-06)
+
+**Option A is confirmed and measured on real data.** It is implemented not inside
+`sample_unified_grid()` as originally proposed, but as a **separate post-pass**,
+`derive_wave_normals.py`, over the exported per-frame JSON — matching the architecture already
+used for seam blending (kept separate so it can be re-run without a multi-hour re-export).
+
+Measured on `medium_wave_left`, 20 frames, via `analyze_wave_normal_noise.py --compare`:
+
+| metric | before (ray_cast) | after (Option A) | change |
+|---|---|---|---|
+| slope, same point next frame (AC2, headline) | 0.0155 | 0.0053 | **−66%** |
+| slope, adjacent in X (AC1) | 0.0209 | 0.0091 | −56% |
+| slope, adjacent in Y | 0.0299 | 0.0166 | −44% |
+| height (AC4 control) | — | unchanged | ✓ |
+| stored-vs-implied normal, max | **179.99°** | 88.55° (edges only) | flips gone |
+
+Diagnosis (measured, and note the correction — do **not** chase the flips):
+
+- The dominant cause is the **re-triangulation jitter of flat face normals** (the FLIP surface
+  re-meshes every frame, so a fixed point lands on a differently-tilted triangle). This is the
+  spec's original point #1 and it drives ~97% of the noise.
+- The `nz<0` "flipped" normals (winding inside/outside inconsistency) are real but only **0.43%**
+  of cells. Fixing them — e.g. Blender `normals_make_consistent(inside=False)` / "recompute
+  outside" — does **nothing** for the in-game signal: slope is `sqrt(1−nz²)`, sign-invariant, so
+  forcing normals up leaves temporal `|Δslope|` unchanged (0.0299 → 0.0299). Even normal *direction*
+  jitter barely improves (3.75° → 3.10°), because it too is re-mesh tilt, not flips. Proof: slope
+  jitter among never-flipping cells is 0.0297, ≈ the all-cells 0.0299.
+- Option A moots the flips anyway: `n = (−dz/dx, −dz/dy, 1)` always has `nz>0`, so it is flip-free
+  by construction *and* kills the tilt jitter (temporal `|Δslope|` → 0.0099, direction → 0.84°).
+
+**Tiling axis is X (grid columns), confirmed rotation-proof** by `detect_tiling_axis.py` (crest
+runs along X; cross-shore/steep face is Y). The Blender→Unreal export rotates axes, so this was
+measured in grid space, not inferred from labels. See the corrected Open Question below.
+
+**Correctness (Tier 2 / AC2b) — passed.** `test_derive_wave_normals.py` runs the derivation on
+synthetic grids with analytic normals: tilted plane (max error 0.00° — sign/axis/scale correct),
+cross-shore sine (slope amplitude ratio 0.991 = expected `sinc(k·step)`, not over-flattened),
+tile-periodic sine (seam-edge error 0.040° with the wrap vs 0.124° without). This is the gate that
+Tier 1 smoothness cannot provide, since all-normals-up passes Tier 1 and is wrong.
+
+**Seam handling (done, measured).** Each exported frame is *already* one self-contained tile of
+period `tiling_x` — `create_joined_blended_mesh` blends frame N with frame N−`frame_offset` while
+building it. So the game tiles by **repeating a frame periodically**, and the seam pad is a
+**within-frame periodic wrap** (`tiling_deriv_x`), not a neighbour frame. Verified from data: the
+N±`frame_offset` frame is the *worst* spatial match at the seam (mean Δ ~2.0 vs ~1.1 for the self
+wrap). On the breaking frames the seam jump between tiled copies drops from **0.137→0.047 mean,
+0.392→0.102 p95** with the wrap on; a one-sided fallback leaves it at 0.101 (≈ unchanged). The
+period is fractional (`tiling_x/step ≈ 40.9`, not 41), so the wrapped column is interpolated.
+
 ## Problem Statement
 
 The `nx/ny/nz` arrays in `wave_unified_data` are **noisy in space and, much worse, in time**. The
@@ -78,7 +128,31 @@ format, the grid, or any consumer.
 
 ## Proposed Solution
 
-### Option A — derive normals from the sampled height grid (recommended)
+### Option A — derive normals from the sampled height grid (recommended, IMPLEMENTED)
+
+> **As built (`derive_wave_normals.py`).** Runs as a post-pass over the exported per-frame JSON,
+> not inside `sample_unified_grid()`. Two corrections the original pseudocode below omits, both
+> required by this pipeline and both found the hard way:
+>
+> 1. **Invalid/dead cells must not be differenced across.** A missed ray leaves the exporter's
+>    init (`nx=ny=0, nz=1, h=0`); the large `offset_y` trim border on the **Y axis** is all such
+>    cells. `masked_deriv()` uses a central difference only where both neighbours are valid, a
+>    one-sided difference at the valid edge, and leaves dead cells as flat up-normal. Blindly
+>    indexing `h` (as below) produces a huge false slope at the valid boundary — exactly where the
+>    rideable face is.
+> 2. **The tiling seam (X axis) needs a periodic wrap.** The seam blend is C0 (position only —
+>    `create_joined_blended_mesh` / `apply_seamless_blending` both `smoothstep`-lerp positions,
+>    never tangents), so a naive one-sided difference at the X-edge does **not** match the next
+>    tile's slope → a coherent slope discontinuity repeating at every tile boundary. Because each
+>    frame is one full period and the game repeats it, `tiling_deriv_x` pads the X-edges with the
+>    frame's *own* opposite side one period back (fractional column, `tiling_x/step ≈ 40.9`), so
+>    the tiled copies join smoothly. Do **not** pad with frame `N ± frame_offset` — measurement
+>    shows that is the worst match; that offset is already consumed building the frame's tile.
+>
+> The verification tooling is `detect_tiling_axis.py` (which axis tiles) and
+> `analyze_wave_normal_noise.py` (before/after metrics + a seam-column check).
+
+Original pseudocode (correct in spirit, seam- and mask-naive):
 
 After the ray-cast pass fills `h`, compute normals by central differences on that grid instead of
 taking them from `ray_cast`:
@@ -207,10 +281,13 @@ comparisons. Only run a full export once the numbers move.
   of that scale, not a straight copy, and every slope the game computes is distorted by a fixed
   factor. This is **independent of the noise** and would not be fixed by this spec. Check the live
   `CoordinateScale` on the `AWaveHeight` instance in the level before assuming either way.
-- **Is 56 cm cross-shore resolution enough?** The grid is 41 x 434 at `step_size` 2.0. Measured in
-  game, the rideable core of the wave face is only ~3 m wide — about **five grid points**. Even with
-  perfect normals, that is a coarse description of the part of the wave the whole game happens on.
-  A finer grid in X is a separate lever worth considering.
+- **Is cross-shore resolution enough? (axis label corrected.)** The grid is 41 (X) x 434 (Y) at
+  `step_size` 2.0. This spec originally called **X** the cross-shore/rideable axis and asked for a
+  finer grid *in X* — that is **wrong**: `detect_tiling_axis.py` shows **X is the along-crest
+  tiling axis** (41 pts) and **Y is the steep cross-shore face** (434 pts). So the cross-shore
+  face is already the *well*-resolved axis. If the rideable core is only ~5 samples wide in game,
+  the shortfall is either along-crest (X, genuinely coarse at 41) or an in-game tiling/interp
+  effect — re-measure against the corrected axes before adding resolution anywhere.
 - Should normals be **temporally smoothed** across frames as well? Option A should remove most of
   the frame-to-frame jitter by construction. Measure first; only add temporal filtering if AC2 is
   still missed.
